@@ -1,0 +1,48 @@
+import datetime as dt
+import re
+from dataclasses import dataclass
+from datetime.timezone import utc
+from typing import ClassVar, Self
+
+import asyncssh
+
+
+@dataclass
+class Token:
+    token: str
+    valid_until: dt.datetime
+
+    token_expr_re: ClassVar[re.Pattern] = re.compile(r"SLURM_JWT=(.+)")
+
+    @classmethod
+    def from_expr(cls, expr: str, valid_until: dt.datetime) -> Self:
+        match = cls.token_expr_re.fullmatch(expr)
+        if match is None:
+            raise ValueError(f"invalid token expression: {expr}")
+
+        token = match.group(0)
+
+        return cls(token, valid_until)
+
+
+@dataclass
+class SocksProxy:
+    handle: asyncssh.SSHListener
+
+    def to_proxy_url(self):
+        return f"http://localhost:{self.handle.get_port()}"
+
+
+async def refresh_token(con: asyncssh.Connection, lifespan: dt.timedelta) -> Token:
+    now = dt.datetime.now(tz=utc)
+
+    result = await con.run(
+        f"scontrol token lifespan={lifespan.total_seconds()}", check=True
+    )
+    return Token.from_expr(result.stdout.strip(), now + lifespan)
+
+
+async def create_socks_proxy(con: asyncssh.Connection) -> SocksProxy:
+    handle = await con.forward_socks("localhost", 0)
+
+    return SocksProxy(handle)
