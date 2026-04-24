@@ -1,0 +1,83 @@
+* slurm client
+
+Just like the PBS client, a slurm client is important.
+
+https://doc.hpc.ifremer.fr/compute/slurm/slurm-rest/
+
+The steps from connection to displaying are:
+- ssh connect, using asyncssh
+- call `scontrol token lifespan=900`, note the token together with the call time
+- detect latest slurm version using the /openapi/v3 endpoint
+- use httpx to perform the actual queries
+
+** endpoints
+
+*** SLURM
+- `/slurm/${API}/diag`
+- `/slurm/${API}/job/allocate  # modifying`
+- `/slurm/${API}/job/submit  # modifying`
+- `/slurm/${API}/job/{job_id}`
+- `/slurm/${API}/jobs/`
+- `/slurm/${API}/jobs/state/`
+- `/slurm/${API}/licenses/`
+- `/slurm/${API}/new/node/ # modifying (admin?)`
+- `/slurm/${API}/node/{node_name}`
+- `/slurm/${API}/nodes/`
+- `/slurm/${API}/partition/{partition_name}`
+- `/slurm/${API}/partitions/`
+- `/slurm/${API}/ping/`
+- `/slurm/${API}/reconfigure/  # modifying (admin?)`
+- `/slurm/${API}/reservation`
+- `/slurm/${API}/reservation/{reservation_name}`
+- `/slurm/${API}/reservations/`
+- `/slurm/${API}/resources/{job_id}`
+- `/slurm/${API}/shares`
+
+*** SLURM db
+- `/slurmdb/${API}/account/{account_name}`
+- `/slurmdb/${API}/accounts/`
+- `/slurmdb/${API}/accounts_association/`
+- `/slurmdb/${API}/association/`
+- `/slurmdb/${API}/associations/`
+- `/slurmdb/${API}/cluster/{cluster_name}`
+- `/slurmdb/${API}/clusters/`
+- `/slurmdb/${API}/config`
+- `/slurmdb/${API}/diag/`
+- `/slurmdb/${API}/instance/`
+- `/slurmdb/${API}/instances/`
+- `/slurmdb/${API}/job/{job_id}`
+- `/slurmdb/${API}/jobs/`
+- `/slurmdb/${API}/ping/`
+- `/slurmdb/${API}/qos/`
+- `/slurmdb/${API}/qos/{qos}`
+- `/slurmdb/${API}/tres/`
+- `/slurmdb/${API}/user/{name}`
+- `/slurmdb/${API}/users/`
+- `/slurmdb/${API}/users_association/`
+- `/slurmdb/${API}/wckey/{id}`
+- `/slurmdb/${API}/wckeys/`
+
+*** Utils
+- `/util/${API}/hostlist  # v0.0.44 only`
+- `/util/${API}/hostnames  # v0.0.44 only`
+** TUI
+The TUI should have:
+- ping status indicator
+- users info
+  - account list / account details
+  - association list / details
+  - instance list / details
+  - user list / details
+  - wckey?
+  - qos?
+- queue list
+- queue summary tables
+- job list
+- job information
+  - state / resources / etc
+  - environment variables
+  - log fields (which should be self-updating like `tail -f` and have builtin filters, e.g. for filtering / interpreting escape sequences)
+- node information
+- partition information
+- reservations
+- shares
