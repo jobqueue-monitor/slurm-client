@@ -8,6 +8,11 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
+asyncssh = ">=2.22.0,<3"
+httpx = ">=0.28.1,<0.29"
+h2 = ">=4.3.0,<5"
+socksio = ">=1.0.0,<2"
+textual = ">=8.2.4,<9"
 
 [feature.py313.dependencies]
 python = "3.13.*"
