@@ -24,6 +24,11 @@ class Token:
 
         return cls(token, valid_until)
 
+    def is_valid(self):
+        now = dt.datetime.now(tz=dt.UTC)
+
+        return now + dt.timedelta(seconds=1) < self.valid_until
+
 
 @dataclass
 class SocksProxy:
