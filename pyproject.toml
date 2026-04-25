@@ -6,6 +6,7 @@ dependencies = [
   "asyncssh>=2.22.0",
   "httpx>=0.28.1",
   "textual>=8.2.4",
+  "rich-click>=1.9.7",
 ]
 dynamic = ["version"]
 
