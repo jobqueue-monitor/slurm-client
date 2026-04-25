@@ -1,0 +1,16 @@
+#footer-area {
+    dock: bottom;
+    height: 1;
+    background: $panel;
+}
+
+#footer-inner {
+    width: 70%;
+}
+
+#footer-area > Label {
+    margin-left: 2;
+    margin-right: 2;
+    width: auto;
+    text-align: right;
+}
