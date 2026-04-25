@@ -81,3 +81,25 @@ The TUI should have:
 - partition information
 - reservations
 - shares
+
+*** Screens
+- slurm
+  - jobs
+  - licenses
+  - nodes
+  - partitions
+  - reservations
+  - resources
+  - shares
+- slurmdb
+  - instances
+  - jobs
+  - qos
+  - users
+  - associations
+  - accounts
+  - wckeys
+  - tres
+- util
+  - hostnames
+  - hostlist
