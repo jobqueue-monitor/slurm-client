@@ -23,11 +23,15 @@ sphinx = "*"
 furo = "*"
 
 [feature.dev.dependencies]
-black = "*"
+black = ">=26.3.1,<27"
 pyinstrument = "*"
-ipython = "*"
+ipython = ">=9.13.0,<10"
 ipdb = "*"
+isort = ">=8.0.1,<9"
+
+[feature.py314.dependencies]
+python = "3.14.*"
 
 [environments]
 docs = ["docs", "py313"]
-default = ["dev", "py313"]
+default = ["dev", "py314"]
