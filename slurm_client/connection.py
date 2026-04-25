@@ -28,13 +28,21 @@ class Token:
 
         return now + dt.timedelta(seconds=1) < self.valid_until
 
+    def __str__(self):
+        return self.token
+
 
 @dataclass
 class SocksProxy:
     handle: asyncssh.SSHListener
 
-    def to_proxy_url(self):
+    def to_url(self):
         return f"http://localhost:{self.handle.get_port()}"
+
+    async def close(self):
+        self.handle.close()
+
+        await self.handle.wait_closed()
 
 
 @dataclass
@@ -46,6 +54,12 @@ class Connection:
         await self.handle.wait_closed()
 
 
+async def connect(server: str) -> Connection:
+    con = await asyncssh.connect(server)
+
+    return Connection(con)
+
+
 async def refresh_token(con: Connection, lifespan: dt.timedelta) -> Token:
     now = dt.datetime.now(tz=dt.UTC)
 
@@ -55,7 +69,7 @@ async def refresh_token(con: Connection, lifespan: dt.timedelta) -> Token:
     return Token.from_expr(result.stdout.strip(), now + lifespan)
 
 
-async def create_socks_proxy(con: asyncssh.Connection) -> SocksProxy:
+async def create_socks_proxy(con: Connection) -> SocksProxy:
     handle = await con.handle.forward_socks("localhost", 0)
 
     return SocksProxy(handle)
