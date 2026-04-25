@@ -1,7 +1,6 @@
 import datetime as dt
 import re
 from dataclasses import dataclass
-from datetime.timezone import utc
 from typing import ClassVar, Self
 
 import asyncssh
@@ -38,16 +37,25 @@ class SocksProxy:
         return f"http://localhost:{self.handle.get_port()}"
 
 
-async def refresh_token(con: asyncssh.Connection, lifespan: dt.timedelta) -> Token:
-    now = dt.datetime.now(tz=utc)
+@dataclass
+class Connection:
+    handle: asyncssh.SSHClientConnection
 
-    result = await con.run(
-        f"scontrol token lifespan={lifespan.total_seconds()}", check=True
+    async def close(self):
+        self.handle.close()
+        await self.handle.wait_closed()
+
+
+async def refresh_token(con: Connection, lifespan: dt.timedelta) -> Token:
+    now = dt.datetime.now(tz=dt.UTC)
+
+    result = await con.handle.run(
+        f"scontrol token lifespan={int(lifespan.total_seconds())}", check=True
     )
     return Token.from_expr(result.stdout.strip(), now + lifespan)
 
 
 async def create_socks_proxy(con: asyncssh.Connection) -> SocksProxy:
-    handle = await con.forward_socks("localhost", 0)
+    handle = await con.handle.forward_socks("localhost", 0)
 
     return SocksProxy(handle)
