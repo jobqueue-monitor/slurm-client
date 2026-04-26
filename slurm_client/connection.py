@@ -19,7 +19,7 @@ class Token:
         if match is None:
             raise ValueError(f"invalid token expression: {expr}")
 
-        token = match.group(0)
+        token = match.group(1)
 
         return cls(token, valid_until)
 
