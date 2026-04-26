@@ -28,6 +28,7 @@ pyinstrument = "*"
 ipython = ">=9.13.0,<10"
 ipdb = "*"
 isort = ">=8.0.1,<9"
+textual-dev = ">=1.8.0,<2"
 
 [feature.py314.dependencies]
 python = "3.14.*"
