@@ -15,6 +15,9 @@ socksio = ">=1.0.0,<2"
 textual = ">=8.2.4,<9"
 rich-click = ">=1.9.7,<2"
 
+[pypi-dependencies]
+slurm-client = { path = ".", editable = true }
+
 [feature.py313.dependencies]
 python = "3.13.*"
 
