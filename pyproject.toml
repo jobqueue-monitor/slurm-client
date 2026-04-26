@@ -10,6 +10,9 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.scripts]
+slurm-client = "slurm_client.main:main"
+
 [build-system]
 requires = ["setuptools>=64.0", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
