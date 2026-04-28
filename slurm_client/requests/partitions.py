@@ -3,12 +3,15 @@ from typing import Any
 
 from textual.message import Message
 
+from slurm_client.requests.decorator import request
+
 
 @dataclass
 class PartitionListMessage(Message):
     partitions: list[dict[str, Any]]
 
 
-def process_partitions_result(result: dict[str, Any]) -> PartitionListMessage:
+@request.get("/slurm/{version}/partitions")
+def all_partitions(result: dict[str, Any]) -> PartitionListMessage:
     partitions = result.get("partitions", [])
     return PartitionListMessage(partitions)
