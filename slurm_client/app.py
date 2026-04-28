@@ -67,11 +67,9 @@ class SlurmClient(App):
         self,
         request: Request,
     ) -> dict[str, Any]:
-        if "{version}" in request.path:
-            # fill in the api version
-            path = request.path.format(version=self.api_version)
-        else:
-            path = request.path
+        path = request.path.format(
+            version=self.api_version if self.api_version is not None else ""
+        )
 
         if self.token is None or not self.token.is_valid():
             self.token = await refresh_token(
