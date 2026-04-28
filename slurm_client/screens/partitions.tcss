@@ -1,0 +1,8 @@
+#title {
+    text-align: center;
+}
+
+DataTable {
+    align: center top;
+    height: auto;
+}
