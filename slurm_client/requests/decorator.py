@@ -3,13 +3,15 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any, Literal
 
+from textual.message import Message
+
 
 @dataclass
 class Request:
     method: Literal["get", "post"]
     path: str
     parameters: dict[str, Any]
-    response_parser: Callable[Any, [dict[str, Any]]]
+    response_parser: Callable[Message, [dict[str, Any]]]
 
 
 def _decorator(method: str, path: str, parameters: dict[str, Any] = None):
