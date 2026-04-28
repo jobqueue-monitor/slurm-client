@@ -4,6 +4,8 @@ from typing import Any
 
 from textual.message import Message
 
+from slurm_client.requests.decorator import request
+
 
 @dataclass
 class PingMessage(Message):
@@ -24,7 +26,8 @@ class PingMessage(Message):
         return f"[b]slurm server[/b]: {status} {sections}"
 
 
-def process_ping_response(result: dict[str, Any]) -> PingMessage:
+@request.get("/slurm/{version}/ping")
+def ping(result: dict[str, Any]) -> PingMessage:
     if "pings" not in result or len(result["pings"]) == 0:
         return {
             "server": "unknown",
