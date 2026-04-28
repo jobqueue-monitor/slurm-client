@@ -4,9 +4,11 @@ import httpx
 from textual.app import App, ComposeResult
 from textual.widgets import Header
 
-from slurm_client.rest_api import api_version, ping
-from slurm_client.rest_api.connection import connect, create_socks_proxy, refresh_token
+from slurm_client.rest_api.api_version import api_version
+from slurm_client.rest_api.connection import connect, refresh_token
+from slurm_client.rest_api.ping import ping
 from slurm_client.rest_api.request import Request
+from slurm_client.screens.error import ErrorScreen, NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
 
 
@@ -29,17 +31,15 @@ class SlurmClient(App):
         yield SlurmClientFooter()
 
     async def determine_api_version(self):
-        response = await self.query_api(api_version)
+        r = await self.query_api(api_version)
+        if r.status_code != httpx.codes.OK:
+            self.screen.post_message(NetworkError(r))
+            return
 
-        if response.status_code != httpx.codes.OK:
-            return None
-
-        self.post_message(api_version.response_parser(response.json()))
+        self.api_version = api_version.response_parser(r.json())
 
     async def setup_connections(self) -> None:
-        self.ssh_con = await connect(self.config.server)
-        self.socks_proxy = await create_socks_proxy(self.ssh_con)
-        self.api_con = httpx.AsyncClient()  # proxy=self.socks_proxy.to_url())
+        self.con = await connect(self.config.server)
 
         await self.determine_api_version()
         await self.ping()
@@ -73,12 +73,12 @@ class SlurmClient(App):
 
         if self.token is None or not self.token.is_valid():
             self.token = await refresh_token(
-                self.ssh_con, lifespan=self.config.token_lifespan
+                self.con.ssh, lifespan=self.config.token_lifespan
             )
 
         url = f"{self.config.address}/{path.lstrip('/')}"
 
-        fetch = getattr(self.api_con, request.method, None)
+        fetch = getattr(self.con.api, request.method, None)
         if fetch is None:
             raise ValueError(f"invalid method: {request.method}")
 
@@ -87,6 +87,13 @@ class SlurmClient(App):
             params=request.parameters,
             headers={"X-SLURM-USER-TOKEN": str(self.token)},
         )
+
+    def on_networkerror(self, msg: NetworkError):
+        r = msg.response
+        error = (
+            f"Network error while fetching {r.url}: {r.status_code} ({r.reason_phrase})"
+        )
+        self.push_screen(ErrorScreen(error))
 
     async def on_unmount(self) -> None:
         # close all connections
