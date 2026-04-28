@@ -1,6 +1,6 @@
 from typing import Any
 
-from slurm_client.requests.decorator import request
+from slurm_client.rest_api.request import request
 
 
 @request.get("/openapi/v3")

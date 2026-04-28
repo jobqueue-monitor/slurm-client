@@ -4,8 +4,8 @@ import httpx
 from textual.app import App, ComposeResult
 from textual.widgets import Header
 
-from slurm_client.api import api_version, ping
-from slurm_client.api.connection import connect, create_socks_proxy, refresh_token
+from slurm_client.rest_api import api_version, ping
+from slurm_client.rest_api.connection import connect, create_socks_proxy, refresh_token
 from slurm_client.rest_api.request import Request
 from slurm_client.widgets.footer import SlurmClientFooter
 

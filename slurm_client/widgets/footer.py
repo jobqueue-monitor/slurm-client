@@ -4,7 +4,7 @@ from textual.containers import Horizontal
 from textual.widget import Widget
 from textual.widgets import Footer, Label
 
-from slurm_client.requests.ping import PingMessage
+from slurm_client.rest_api.ping import PingMessage
 
 
 class SlurmClientFooter(Widget):

@@ -4,7 +4,7 @@ from typing import Any
 
 from textual.message import Message
 
-from slurm_client.requests.decorator import request
+from slurm_client.rest_api.request import request
 
 
 @dataclass

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import asyncssh
 import httpx
 
-from slurm_client.requests.token import Token
+from slurm_client.rest_api.token import Token
 
 
 @dataclass
