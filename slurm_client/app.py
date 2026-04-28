@@ -9,12 +9,18 @@ from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.ping import ping
 from slurm_client.rest_api.request import Request
 from slurm_client.screens.error import ErrorScreen, NetworkError
+from slurm_client.screens.partitions import PartitionsSummary
 from slurm_client.widgets.footer import SlurmClientFooter
 
 
 class SlurmClient(App):
     TITLE = "jobqueue-monitor"
     CSS_PATH = "app.tcss"
+
+    SCREENS = {
+        "partitions_summary": PartitionsSummary,
+    }
+    BINDINGS = [("p", "push_screen('partitions_summary')", "Partitions")]
 
     def __init__(self, config):
         super().__init__()
@@ -27,7 +33,6 @@ class SlurmClient(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-
         yield SlurmClientFooter()
 
     async def determine_api_version(self):
@@ -45,9 +50,9 @@ class SlurmClient(App):
         await self.ping()
 
     async def on_load(self) -> None:
+        self.con = None
         self.token = None
         self.api_version = None
-
         self.run_worker(self.setup_connections(), exclusive=True)
 
     async def on_mount(self) -> None:
@@ -82,11 +87,11 @@ class SlurmClient(App):
         if fetch is None:
             raise ValueError(f"invalid method: {request.method}")
 
-        return await fetch(
-            url,
-            params=request.parameters,
-            headers={"X-SLURM-USER-TOKEN": str(self.token)},
-        )
+        headers = {}
+        if self.token is not None:
+            headers["X-SLURM-USER-TOKEN"] = str(self.token)
+
+        return await fetch(url, params=request.parameters, headers=headers)
 
     def on_networkerror(self, msg: NetworkError):
         r = msg.response
@@ -96,10 +101,6 @@ class SlurmClient(App):
         self.push_screen(ErrorScreen(error))
 
     async def on_unmount(self) -> None:
-        # close all connections
-        if self.api_con:
-            await self.api_con.aclose()
-        if self.socks_proxy:
-            await self.socks_proxy.close()
-        if self.ssh_con:
-            await self.ssh_con.close()
+        # disconnect
+        if self.con:
+            await self.con.close()

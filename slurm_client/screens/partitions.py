@@ -9,7 +9,7 @@ from textual.screen import Screen
 from textual.widgets import DataTable, Header, Label
 
 from slurm_client.screens.error import ErrorScreen, NetworkError
-from slurm_client.screens.widgets.footer import SlurmClientFooter
+from slurm_client.widgets.footer import SlurmClientFooter
 
 
 class PartitionsSummary(Screen):
