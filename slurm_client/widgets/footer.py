@@ -18,7 +18,7 @@ class SlurmClientFooter(Widget):
     }
 
     SlurmClientFooter #footer-inner {
-        width: 20%;
+        width: 60%;
     }
 
     SlurmClientFooter #footer-area > Label {
