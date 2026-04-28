@@ -1,13 +1,10 @@
-from dataclasses import dataclass
-from typing import Any
-
 import httpx
 from textual import on
 from textual.app import ComposeResult
-from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import DataTable, Header, Label
 
+from slurm_client.rest_api import PartitionListMessage, all_partitions
 from slurm_client.screens.error import ErrorScreen, NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
 
@@ -21,10 +18,6 @@ class PartitionsSummary(Screen):
 
     ROW_NAMES = ["name", "total_nodes", "total_cpus", "state"]
 
-    @dataclass
-    class PartitionsFetched(Message):
-        partitions: list[dict[str, Any]]
-
     def compose(self) -> ComposeResult:
         yield Header()
         yield Label("Partitions", id="title")
@@ -37,19 +30,20 @@ class PartitionsSummary(Screen):
         table.zebra_stripes = True
         table.add_columns(*self.ROW_NAMES)
 
-        self.run_worker(self.fetch_partitions)
+        self.run_worker(self.fetch_partitions())
+        self.run_worker(self.app.ping())
 
     async def fetch_partitions(self):
-        r = await self.app.query_api(method="GET", path="/slurm/{version}/partitions")
+        r = await self.app.query_api(all_partitions)
         if r.status_code != httpx.codes.OK:
             self.post_message(NetworkError(r))
             return
 
-        partitions = r.json()["partitions"]
-        self.post_message(self.PartitionsFetched(partitions))
+        msg = all_partitions.response_parser(r.json())
+        self.post_message(msg)
 
-    @on(PartitionsFetched)
-    async def display_partitions_summary(self, msg: PartitionsFetched) -> None:
+    @on(PartitionListMessage)
+    async def display_partitions_summary(self, msg: PartitionListMessage) -> None:
         table = self.query_one(DataTable)
         table.clear()
         for partition in msg.partitions:

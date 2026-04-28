@@ -4,9 +4,8 @@ import httpx
 from textual.app import App, ComposeResult
 from textual.widgets import Header
 
-from slurm_client.rest_api.api_version import api_version
+from slurm_client.rest_api import api_version, ping
 from slurm_client.rest_api.connection import connect, refresh_token
-from slurm_client.rest_api.ping import ping
 from slurm_client.rest_api.request import Request
 from slurm_client.screens.error import ErrorScreen, NetworkError
 from slurm_client.screens.partitions import PartitionsSummary
