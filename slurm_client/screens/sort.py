@@ -1,8 +1,8 @@
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Grid
 from textual.screen import ModalScreen
-from textual.widgets import Button, RadioButton, RadioSet
+from textual.widgets import Button, RadioSet
 
 
 class SortScreen(ModalScreen):
@@ -14,14 +14,12 @@ class SortScreen(ModalScreen):
         self.columns = columns
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="container"):
-            with RadioSet(id="columns"):
-                for column in self.columns:
-                    yield RadioButton(column)
-
-            with Horizontal():
-                yield Button("Submit", id="submit")
-                yield Button("Cancel", id="cancel", variant="error")
+        yield Grid(
+            RadioSet(*self.columns, id="columns"),
+            Button("Submit", id="submit"),
+            Button("Cancel", id="cancel", variant="error"),
+            id="dialog",
+        )
 
     @on(Button.Pressed, "#submit")
     def handle_sort(self) -> None:
