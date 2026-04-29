@@ -1,5 +1,5 @@
 #tabs {
     border: round purple;
     margin: 2 2 2 2;
-    height: 80%;
+    height: 95%;
 }
