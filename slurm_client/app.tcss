@@ -1,21 +1,20 @@
 #content {
     border: round purple;
     margin: 2 2 2 2;
-    align-horizontal: right;
 }
 #tabs {
     height: 90%;
 }
 
+#actions {
+    align-horizontal: right;
+}
 #actions > Horizontal {
     border: round red;
     width: auto;
     height: auto;
 }
 
-#actions {
-    align-horizontal: right;
-}
 #actions Button {
     margin-left: 1;
     margin-right: 1;
