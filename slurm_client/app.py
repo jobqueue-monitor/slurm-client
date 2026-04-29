@@ -93,13 +93,13 @@ class SlurmClient(App):
         partitions_table.zebra_stripes = True
 
         jobs_table = self.query_one("DataTable#jobs")
-        for col in self.COLUMN_NAMES["partitions"]:
+        for col in self.COLUMN_NAMES["jobs"]:
             jobs_table.add_column(col, key=col)
         jobs_table.cursor_type = "row"
         jobs_table.zebra_stripes = True
 
         nodes_table = self.query_one("DataTable#nodes")
-        for col in self.COLUMN_NAMES["partitions"]:
+        for col in self.COLUMN_NAMES["nodes"]:
             nodes_table.add_column(col, key=col)
         nodes_table.cursor_type = "row"
         nodes_table.zebra_stripes = True
