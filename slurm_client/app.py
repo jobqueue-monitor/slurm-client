@@ -3,6 +3,7 @@ from typing import Any
 import httpx
 from textual import on
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.widgets import DataTable, Header, TabbedContent, TabPane
 
 from slurm_client.rest_api import (
@@ -27,6 +28,11 @@ class SlurmClient(App):
         "partitions": ["name", "total_nodes", "total_cpus", "state"],
         "jobs": ["name", "user", "group", "partition", "start_time", "state"],
         "nodes": ["name", "address", "hostname", "state", "partitions"],
+    }
+
+    BINDINGS = {
+        Binding("left", "previous_tab", "Previous tab", show=False),
+        Binding("right", "next_tab", "Next tab", show=False),
     }
 
     def __init__(self, config):
@@ -91,7 +97,18 @@ class SlurmClient(App):
 
     @on(TabbedContent.TabActivated)
     def on_tab_activated(self, msg: TabbedContent.TabActivated) -> None:
+        table = self.query_one(f"DataTable#{msg.pane.id}")
+        table.focus()
+
         self.run_worker(self._refresh_current_table())
+
+    def action_previous_tab(self) -> None:
+        tabs = self.query_one("Tabs")
+        tabs.action_previous_tab()
+
+    def action_next_tab(self) -> None:
+        tabs = self.query_one("Tabs")
+        tabs.action_next_tab()
 
     async def _refresh_current_table(self) -> None:
         if self.con is None:
