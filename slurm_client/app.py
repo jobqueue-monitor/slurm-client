@@ -1,10 +1,11 @@
 from typing import Any
 
 import httpx
-from textual import on
+from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
 
 from slurm_client.rest_api import (
@@ -18,6 +19,7 @@ from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.request import Request
 from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.screens.error import ErrorScreen, NetworkError
+from slurm_client.screens.sort import SortScreen
 from slurm_client.widgets.footer import SlurmClientFooter
 
 
@@ -84,17 +86,21 @@ class SlurmClient(App):
         self.run_worker(self.setup_connections(), exclusive=True)
 
         partitions_table = self.query_one("DataTable#partitions")
-        partitions_table.add_columns(*self.COLUMN_NAMES["partitions"])
+        for col in self.COLUMN_NAMES["partitions"]:
+            partitions_table.add_column(col, key=col)
+        self.sort_column = self.COLUMN_NAMES["partitions"][0]
         partitions_table.cursor_type = "row"
         partitions_table.zebra_stripes = True
 
         jobs_table = self.query_one("DataTable#jobs")
-        jobs_table.add_columns(*self.COLUMN_NAMES["jobs"])
+        for col in self.COLUMN_NAMES["partitions"]:
+            jobs_table.add_column(col, key=col)
         jobs_table.cursor_type = "row"
         jobs_table.zebra_stripes = True
 
         nodes_table = self.query_one("DataTable#nodes")
-        nodes_table.add_columns(*self.COLUMN_NAMES["nodes"])
+        for col in self.COLUMN_NAMES["partitions"]:
+            nodes_table.add_column(col, key=col)
         nodes_table.cursor_type = "row"
         nodes_table.zebra_stripes = True
 
@@ -103,7 +109,10 @@ class SlurmClient(App):
 
     @on(TabbedContent.TabActivated)
     def on_tab_activated(self, msg: TabbedContent.TabActivated) -> None:
-        table = self.query_one(f"DataTable#{msg.pane.id}")
+        active = msg.pane.id
+        table = self.query_one(f"DataTable#{active}")
+        self.sort_column = self.COLUMN_NAMES[active][0]
+        table.sort(self.sort_column)
         table.focus()
 
         self.run_worker(self._refresh_current_table())
@@ -145,13 +154,33 @@ class SlurmClient(App):
         table.clear()
         for row in msg.rows():
             table.add_row(*row)
+        table.sort(self.sort_column)
 
         table.cursor_coordinate = pos
         table.scroll_y = scroll_y
         if focused:
             table.focus()
 
-    async def ping(self) -> str:
+    @work
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        match event.button.id:
+            case "sort":
+                tabs = self.query_one("TabbedContent")
+                active = tabs.active
+                sort_column = await self.push_screen_wait(
+                    SortScreen(self.COLUMN_NAMES[active])
+                )
+                if sort_column is None:
+                    return
+
+                table = self.query_one(f"DataTable#{active}")
+                table.sort(sort_column)
+                self.sort_column = sort_column
+
+    async def ping(self) -> None:
+        if isinstance(self.screen, ModalScreen):
+            return
+
         r = await self.query_api(request=ping)
         if r.status_code != httpx.codes.OK:
             server_info = {}

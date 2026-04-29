@@ -1,0 +1,11 @@
+SortScreen {
+    align: center middle;
+}
+
+Vertical {
+    align: center middle;
+}
+
+#columns {
+    width: 45%;
+}
