@@ -4,7 +4,8 @@ import httpx
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import DataTable, Header, TabbedContent, TabPane
+from textual.containers import Horizontal, Vertical
+from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
 
 from slurm_client.rest_api import (
     api_version,
@@ -46,13 +47,18 @@ class SlurmClient(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with TabbedContent(id="tabs"):
-            with TabPane("Partitions", id="partitions", classes="tab"):
-                yield DataTable(id="partitions")
-            with TabPane("Jobs", id="jobs", classes="tab"):
-                yield DataTable(id="jobs")
-            with TabPane("Nodes", id="nodes", classes="tab"):
-                yield DataTable(id="nodes")
+        with Vertical(id="content"):
+            with Horizontal(id="actions"):
+                with Horizontal():
+                    yield Button("Sort", id="sort")
+                    yield Button("Filters", id="filters")
+            with TabbedContent(id="tabs"):
+                with TabPane("Partitions", id="partitions", classes="tab"):
+                    yield DataTable(id="partitions")
+                with TabPane("Jobs", id="jobs", classes="tab"):
+                    yield DataTable(id="jobs")
+                with TabPane("Nodes", id="nodes", classes="tab"):
+                    yield DataTable(id="nodes")
         yield SlurmClientFooter()
 
     async def determine_api_version(self):
