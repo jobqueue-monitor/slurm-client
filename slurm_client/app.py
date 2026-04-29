@@ -1,14 +1,21 @@
 from typing import Any
 
 import httpx
+from textual import on
 from textual.app import App, ComposeResult
-from textual.widgets import Header
+from textual.widgets import DataTable, Header, TabbedContent, TabPane
 
-from slurm_client.rest_api import api_version, ping
+from slurm_client.rest_api import (
+    api_version,
+    jobs_summary,
+    nodes_summary,
+    partitions_summary,
+    ping,
+)
 from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.request import Request
+from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.screens.error import ErrorScreen, NetworkError
-from slurm_client.screens.partitions import PartitionsSummary
 from slurm_client.widgets.footer import SlurmClientFooter
 
 
@@ -16,10 +23,11 @@ class SlurmClient(App):
     TITLE = "jobqueue-monitor"
     CSS_PATH = "app.tcss"
 
-    SCREENS = {
-        "partitions_summary": PartitionsSummary,
+    COLUMN_NAMES = {
+        "partitions": ["name", "total_nodes", "total_cpus", "state"],
+        "jobs": ["name", "user", "group", "partition", "start_time", "state"],
+        "nodes": ["name", "address", "hostname", "state", "partitions"],
     }
-    BINDINGS = [("p", "push_screen('partitions_summary')", "Partitions")]
 
     def __init__(self, config):
         super().__init__()
@@ -32,6 +40,13 @@ class SlurmClient(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
+        with TabbedContent(id="tabs"):
+            with TabPane("Partitions", id="partitions", classes="tab"):
+                yield DataTable(id="partitions")
+            with TabPane("Jobs", id="jobs", classes="tab"):
+                yield DataTable(id="jobs")
+            with TabPane("Nodes", id="nodes", classes="tab"):
+                yield DataTable(id="nodes")
         yield SlurmClientFooter()
 
     async def determine_api_version(self):
@@ -52,10 +67,58 @@ class SlurmClient(App):
         self.con = None
         self.token = None
         self.api_version = None
-        self.run_worker(self.setup_connections(), exclusive=True)
 
     async def on_mount(self) -> None:
+        self.run_worker(self.setup_connections(), exclusive=True)
+
+        partitions_table = self.query_one("DataTable#partitions")
+        partitions_table.add_columns(*self.COLUMN_NAMES["partitions"])
+        partitions_table.cursor_type = "row"
+        partitions_table.zebra_stripes = True
+
+        jobs_table = self.query_one("DataTable#jobs")
+        jobs_table.add_columns(*self.COLUMN_NAMES["jobs"])
+        jobs_table.cursor_type = "row"
+        jobs_table.zebra_stripes = True
+
+        nodes_table = self.query_one("DataTable#nodes")
+        nodes_table.add_columns(*self.COLUMN_NAMES["nodes"])
+        nodes_table.cursor_type = "row"
+        nodes_table.zebra_stripes = True
+
         self.set_interval(self.config.ping_interval, self.ping)
+        self.set_interval(self.config.ping_interval, self._refresh_current_table)
+
+    @on(TabbedContent.TabActivated)
+    def on_tab_activated(self, msg: TabbedContent.TabActivated) -> None:
+        self.run_worker(self._refresh_current_table())
+
+    async def _refresh_current_table(self) -> None:
+        if self.con is None:
+            return
+
+        tabs = self.query_one(TabbedContent)
+        await self._fetch_table_data(tabs.active)
+
+    async def _fetch_table_data(self, kind: str) -> None:
+        requests = {
+            "partitions": partitions_summary,
+            "jobs": jobs_summary,
+            "nodes": nodes_summary,
+        }
+        request = requests[kind]
+        r = await self.query_api(request)
+        msg = request.response_parser(r.json())
+        self.post_message(msg)
+
+    @on(TableContentFetched)
+    def on_table_content_fetched(self, msg: TableContentFetched):
+        table = self.query_one(f"DataTable#{msg.kind}")
+        pos = table.cursor_coordinate
+        table.clear()
+        for row in msg.rows():
+            table.add_row(*row)
+        table.cursor_coordinate = pos
 
     async def ping(self) -> str:
         r = await self.query_api(request=ping)
