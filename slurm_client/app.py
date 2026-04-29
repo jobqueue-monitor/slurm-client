@@ -137,11 +137,19 @@ class SlurmClient(App):
     @on(TableContentFetched)
     def on_table_content_fetched(self, msg: TableContentFetched):
         table = self.query_one(f"DataTable#{msg.kind}")
+
+        focused = table.has_focus
         pos = table.cursor_coordinate
+        scroll_y = table.scroll_y
+
         table.clear()
         for row in msg.rows():
             table.add_row(*row)
+
         table.cursor_coordinate = pos
+        table.scroll_y = scroll_y
+        if focused:
+            table.focus()
 
     async def ping(self) -> str:
         r = await self.query_api(request=ping)
