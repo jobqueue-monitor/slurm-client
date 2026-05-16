@@ -7,8 +7,11 @@ from slurm_client.config import Config
 @click.command()
 @click.argument("server", type=str)
 @click.argument("api-address", type=str)
-def main(server: str, api_address: str) -> None:
+@click.pass_context
+def main(ctx: click.Context, server: str, api_address: str) -> None:
     config = Config(server=server, address=api_address)
 
     app = SlurmClient(config)
     app.run()
+
+    ctx.exit(app.return_code or 0)

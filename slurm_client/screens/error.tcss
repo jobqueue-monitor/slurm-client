@@ -1,0 +1,17 @@
+ParametrizedErrorScreen {
+    align: center middle;
+}
+
+ParametrizedErrorScreen > Grid#dialog {
+    border: round red 80%;
+    height: 11;
+    width: 60;
+
+    grid-size: 1;
+    padding: 0 1;
+    background: $surface;
+}
+
+#dialog > Container {
+    content-align: center middle;
+}

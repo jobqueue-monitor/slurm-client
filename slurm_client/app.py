@@ -1,6 +1,7 @@
 from typing import Any
 
 import httpx
+from asyncssh import ConnectionLost as SSHConnectionLost
 from textual import on
 from textual.app import App
 from textual.messages import ExitApp
@@ -12,7 +13,12 @@ from slurm_client.rest_api import (
 )
 from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.request import Request
-from slurm_client.screens.error import ErrorScreen, NetworkError
+from slurm_client.screens.error import (
+    ErrorScreen,
+    FatalErrorScreen,
+    NetworkError,
+    SSHError,
+)
 from slurm_client.screens.main import MainScreen
 from slurm_client.widgets.footer import SlurmClientFooter
 
@@ -42,7 +48,11 @@ class SlurmClient(App):
         self.api_version = api_version.response_parser(r.json())
 
     async def setup_connections(self) -> None:
-        self.con = await connect(self.config.server)
+        try:
+            self.con = await connect(self.config.server)
+        except SSHConnectionLost as e:
+            self.post_message(SSHError(e))
+            return
 
         await self.determine_api_version()
 
@@ -105,6 +115,15 @@ class SlurmClient(App):
             f"Network error while fetching {r.url}: {r.status_code} ({r.reason_phrase})"
         )
         self.push_screen(ErrorScreen(error))
+
+    async def on_ssherror(self, msg: SSHError):
+        reason = msg.reason
+        error = f"Connecting to the ssh server failed: [i]{reason}[/i]"
+
+        def check_quit(quit: bool | None) -> None:
+            self.exit(1)
+
+        self.push_screen(FatalErrorScreen(error), check_quit)
 
     @on(ExitApp)
     async def on_exit(self) -> None:
