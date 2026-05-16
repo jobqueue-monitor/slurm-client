@@ -1,7 +1,7 @@
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import partial
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from textual.message import Message
 
@@ -12,6 +12,9 @@ class Request:
     path: str
     parameters: dict[str, Any]
     response_parser: Callable[Message, [dict[str, Any]]]
+
+    def __call__(self, **kwargs) -> Self:
+        return replace(path=self.path.format(**kwargs))
 
 
 def _decorator(method: str, path: str, parameters: dict[str, Any] = None):
