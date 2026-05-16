@@ -89,7 +89,9 @@ def partition_details(result: dict[str, Any]) -> PartitionDetails:
 @request.get("/slurm/{version}/nodes")
 def resource_usage(result: dict[str, Any], partition: str) -> ResourceDict:
     nodes = [
-        node for node in result["nodes"] if partition in node.get("partitions", [])
+        node
+        for node in result["nodes"]
+        if partition in node.get("partitions", []) and node["state"] == ["UP"]
     ]
 
     units = {

@@ -21,7 +21,7 @@ def _render_resource(name: str, total: str, used: str | None) -> ResourceBar:
     total_value, total_units = split_value(total)
     used_value, used_units = split_value(used)
 
-    if total_units != used_units and used != "":
+    if total_units != used_units and used not in ("", None):
         raise ValueError(f"mismatching units ({total_units} != {used_units}")
 
     return ResourceBar(used=used_value, total=total_value, units=total_units)
