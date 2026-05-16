@@ -45,8 +45,11 @@ def parse_resource_spec(spec: str) -> ResourceDict:
     }
     translated = {translations.get(key, key): value for key, value in decoded.items()}
 
-    return default_resources | translated
+    return translated
 
 
 def parse_resources(total: str, used: str) -> ResourcesDict:
-    return {"total": parse_resource_spec(total), "used": parse_resource_spec(used)}
+    return {
+        "total": default_resources | parse_resource_spec(total),
+        "used": default_resources | parse_resource_spec(used),
+    }
