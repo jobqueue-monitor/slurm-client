@@ -12,6 +12,15 @@ class PartitionListMessage(Message):
     partitions: list[dict[str, Any]]
 
 
+@dataclass
+class PartitionDetails(Message):
+    name: str
+    states: list[str]
+    alternate: str
+
+    nodes: list[str]
+
+
 class PartitionSummary(TypedDict):
     name: str
     total_nodes: int
@@ -40,3 +49,8 @@ def partitions_summary(result: dict[str, Any]) -> TableContentFetched:
     ]
 
     return TableContentFetched("partitions", rows)
+
+
+@request.get("/slurm/{version}/partition/{partition_name}")
+def partition_details(result: dict[str, Any]) -> PartitionDetails:
+    raise ValueError()
