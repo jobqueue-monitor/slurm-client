@@ -4,7 +4,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.events import ScreenResume, ScreenSuspend
+from textual.events import Click, ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
 
@@ -172,3 +172,23 @@ class MainScreen(Screen):
             if not name.startswith("main:"):
                 continue
             timer.resume()
+
+    @on(Click)
+    def on_click(self, event: Click) -> None:
+        active_tab = self.current_tab()
+
+        widget = event.widget
+        if not isinstance(widget, DataTable):
+            return
+
+        hover_column = self.COLUMN_NAMES[active_tab][widget.hover_column]
+
+        current_sorting = self.sort_columns[active_tab]
+        reverse = (
+            not current_sorting.reverse
+            if current_sorting.name == hover_column
+            else False
+        )
+
+        widget.sort(hover_column, reverse=reverse)
+        self.sort_columns[active_tab] = Sorting(name=hover_column, reverse=reverse)
