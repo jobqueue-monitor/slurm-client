@@ -126,12 +126,16 @@ class SlurmClient(App):
         tabs = self.query_one("Tabs")
         tabs.action_next_tab()
 
+    def current_tab(self) -> str:
+        tabs = self.query_one("TabbedContent")
+        return tabs.active
+
     async def _refresh_current_table(self) -> None:
         if self.con is None:
             return
 
-        tabs = self.query_one(TabbedContent)
-        await self._fetch_table_data(tabs.active)
+        active_tab = self.current_tab()
+        await self._fetch_table_data(active_tab)
 
     async def _fetch_table_data(self, kind: str) -> None:
         requests = {
