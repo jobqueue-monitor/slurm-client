@@ -5,6 +5,7 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.events import ScreenResume, ScreenSuspend
 from textual.messages import ExitApp
 from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
@@ -48,6 +49,8 @@ class SlurmClient(App):
         self.ssh_con = None
         self.socks_proxy = None
         self.api_con = None
+
+        self.timers = {}
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -106,8 +109,10 @@ class SlurmClient(App):
         nodes_table.cursor_type = "row"
         nodes_table.zebra_stripes = True
 
-        self.set_interval(self.config.ping_interval, self.ping)
-        self.set_interval(self.config.ping_interval, self._refresh_current_table)
+        self.timers["ping"] = self.set_interval(self.config.ping_interval, self.ping)
+        self.timers["table_refresh"] = self.set_interval(
+            self.config.ping_interval, self._refresh_current_table
+        )
 
     @on(TabbedContent.TabActivated)
     def on_tab_activated(self, msg: TabbedContent.TabActivated) -> None:
@@ -233,6 +238,17 @@ class SlurmClient(App):
             headers["X-SLURM-USER-TOKEN"] = str(self.token)
 
         return await fetch(url, params=request.parameters, headers=headers)
+
+    @on(ScreenSuspend)
+    def on_screen_suspend(self) -> None:
+        for timer in self.timers.values():
+            timer.pause()
+
+    @on(ScreenResume)
+    def on_screen_resume(self) -> None:
+        self.log("screen resume")
+        for timer in self.timers.values():
+            timer.resume()
 
     def on_networkerror(self, msg: NetworkError):
         r = msg.response
