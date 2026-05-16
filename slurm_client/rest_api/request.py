@@ -13,9 +13,14 @@ class Request:
     parameters: dict[str, Any]
     response_parser: Callable[Message, [dict[str, Any]]]
 
-    def __call__(self, **kwargs) -> Self:
+    def path_parameters(self, **kwargs) -> Self:
         new_path = self.path.format(version="{version}", **kwargs)
         return replace(self, path=new_path)
+
+    def parser_parameters(self, **kwargs) -> Self:
+        new_parser = partial(self.response_parser, **kwargs)
+
+        return replace(self, response_parser=new_parser)
 
 
 def _decorator(method: str, path: str, parameters: dict[str, Any] = None):

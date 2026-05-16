@@ -9,6 +9,7 @@ from slurm_client.rest_api.partitions import (
     PartitionDetails,
     ResourcesDict,
     partition_details,
+    resource_usage,
 )
 from slurm_client.rest_api.resources import split_value
 from slurm_client.screens.error import ErrorScreen, NetworkError
@@ -74,13 +75,21 @@ class PartitionDetails(Screen):
         self.run_worker(self.app.ping())
 
     async def fetch_partition_details(self, initial=False):
-        request = partition_details(partition_name=self.partition_name)
+        request = partition_details.path_parameters(partition_name=self.partition_name)
         r = await self.app.query_api(request)
         if r.status_code != httpx.codes.OK:
             self.post_message(NetworkError(r))
             return
 
         msg = request.response_parser(r.json())
+
+        request = resource_usage.parser_parameters(partition=self.partition_name)
+        r = await self.app.query_api(request)
+        if r.status_code != httpx.codes.OK:
+            self.post_message(NetworkError(r))
+            return
+        msg.tracked_resources["used"] = request.response_parser(r.json())
+
         self.post_message(msg)
 
     @on(PartitionDetails)
