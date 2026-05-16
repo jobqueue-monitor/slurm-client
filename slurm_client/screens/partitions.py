@@ -74,7 +74,7 @@ class PartitionDetails(Screen):
         self.run_worker(self.fetch_partition_details(initial=True))
         self.run_worker(self.app.ping())
 
-    async def fetch_partition_details(self, initial=False):
+    async def fetch_partition_details(self):
         request = partition_details.path_parameters(partition_name=self.partition_name)
         r = await self.app.query_api(request)
         if r.status_code != httpx.codes.OK:
