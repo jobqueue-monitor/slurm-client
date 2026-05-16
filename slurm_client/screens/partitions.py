@@ -1,5 +1,3 @@
-import re
-
 import httpx
 from textual import on
 from textual.app import ComposeResult
@@ -12,30 +10,15 @@ from slurm_client.rest_api.partitions import (
     ResourcesDict,
     partition_details,
 )
+from slurm_client.rest_api.resources import split_value
 from slurm_client.screens.error import ErrorScreen, NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
 from slurm_client.widgets.resource import ResourceBar
 
-value_re = re.compile(r"(?P<value>[0-9]+)(?P<units>[a-zA-Z]+)?")
-
-
-def _split_value(value: str | None) -> (int, str | None):
-    if value is None:
-        return 0, None
-
-    match = value_re.fullmatch(value)
-    if match is None:
-        raise ValueError(f"cannot parse value: {value}")
-
-    numeric_value = int(match.group("value"))
-    units = match.group("units")
-
-    return numeric_value, units
-
 
 def _render_resource(name: str, total: str, used: str | None) -> ResourceBar:
-    total_value, total_units = _split_value(total)
-    used_value, used_units = _split_value(used)
+    total_value, total_units = split_value(total)
+    used_value, used_units = split_value(used)
 
     if total_units != used_units and used != "":
         raise ValueError(f"mismatching units ({total_units} != {used_units}")
