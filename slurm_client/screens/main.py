@@ -54,22 +54,30 @@ class MainScreen(Screen):
         yield SlurmClientFooter()
 
     async def on_mount(self) -> None:
+        self.sort_columns: dict[str, Sorting] = {}
+
         partitions_table = self.query_one("DataTable#partitions")
         for col in self.COLUMN_NAMES["partitions"]:
             partitions_table.add_column(col, key=col)
-        self.sort_column = self.COLUMN_NAMES["partitions"][0]
+        self.sort_columns["partitions"] = Sorting(
+            self.COLUMN_NAMES["partitions"][0], reverse=False
+        )
         partitions_table.cursor_type = "row"
         partitions_table.zebra_stripes = True
 
         jobs_table = self.query_one("DataTable#jobs")
         for col in self.COLUMN_NAMES["jobs"]:
             jobs_table.add_column(col, key=col)
+        self.sort_columns["jobs"] = Sorting(self.COLUMN_NAMES["jobs"][0], reverse=False)
         jobs_table.cursor_type = "row"
         jobs_table.zebra_stripes = True
 
         nodes_table = self.query_one("DataTable#nodes")
         for col in self.COLUMN_NAMES["nodes"]:
             nodes_table.add_column(col, key=col)
+        self.sort_columns["nodes"] = Sorting(
+            self.COLUMN_NAMES["nodes"][0], reverse=False
+        )
         nodes_table.cursor_type = "row"
         nodes_table.zebra_stripes = True
 
@@ -119,6 +127,7 @@ class MainScreen(Screen):
 
     @on(TableContentFetched)
     def on_table_content_fetched(self, msg: TableContentFetched):
+        active_tab = msg.kind
         table = self.query_one(f"DataTable#{msg.kind}")
 
         focused = table.has_focus
@@ -128,7 +137,9 @@ class MainScreen(Screen):
         table.clear()
         for row in msg.rows():
             table.add_row(*row)
-        table.sort(self.sort_column)
+
+        sorting = self.sort_columns[active_tab]
+        table.sort(sorting.name, reverse=sorting.reverse)
 
         table.cursor_coordinate = pos
         table.scroll_y = scroll_y
