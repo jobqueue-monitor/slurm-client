@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -15,6 +17,12 @@ from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.screens.partitions import PartitionDetails
 from slurm_client.screens.sort import SortScreen
 from slurm_client.widgets.footer import SlurmClientFooter
+
+
+@dataclass
+class Sorting:
+    name: str
+    reverse: bool
 
 
 class MainScreen(Screen):
