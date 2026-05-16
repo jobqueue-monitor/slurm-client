@@ -36,6 +36,14 @@ textual-dev = ">=1.8.0,<2"
 [feature.py314.dependencies]
 python = "3.14.*"
 
+[feature.tests.dependencies]
+pytest = "*"
+pytest-cov = "*"
+
+[feature.tests.tasks]
+tests = { cmd = "pytest --cov=slurm_client", cwd = "." }
+
 [environments]
 docs = ["docs", "py313"]
 default = ["dev", "py314"]
+tests = ["tests"]

@@ -5,8 +5,8 @@ from typing import Any, TypedDict
 from slurm_client.rest_api.request import request
 from slurm_client.rest_api.table_message import TableContentFetched
 
-node_group_re = re.compile(r"[-a-z0-9]+\[[0-9]+(?:,[0-9]+)*\]")
-node_glob_re = re.compile(r"(?P<prefix>[-a-z0-9]+)\[(?P<variations>[0-9,]+)\]")
+node_group_re = re.compile(r"[-a-z0-9]+(?:\[[0-9]+(?:,[0-9]+)*\])?")
+node_glob_re = re.compile(r"(?P<prefix>[-a-z0-9]+)(?:\[(?P<variations>[0-9,]+)\])?")
 
 
 def _expand_glob(glob: str) -> list[str]:
@@ -14,6 +14,8 @@ def _expand_glob(glob: str) -> list[str]:
 
     prefix = match.group("prefix")
     variations = match.group("variations")
+    if variations is None:
+        return [prefix]
 
     return [f"{prefix}{value}" for value in variations.split(",")]
 
@@ -25,9 +27,6 @@ def parse_node_list(nodes: dict[str, Any]) -> list[str]:
     configured = nodes["configured"]
 
     globs = node_group_re.findall(configured)
-    if not globs and configured:
-        return configured.split(",")
-
     return list(itertools.chain.from_iterable(_expand_glob(glob) for glob in globs))
 
 
