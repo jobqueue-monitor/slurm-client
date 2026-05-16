@@ -5,6 +5,7 @@ from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.messages import ExitApp
 from textual.screen import ModalScreen
 from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
 
@@ -222,7 +223,8 @@ class SlurmClient(App):
         )
         self.push_screen(ErrorScreen(error))
 
-    async def on_unmount(self) -> None:
+    @on(ExitApp)
+    async def on_exit(self) -> None:
         # disconnect
         if self.con:
             await self.con.close()
