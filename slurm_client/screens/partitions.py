@@ -1,62 +1,135 @@
+import re
+
 import httpx
 from textual import on
 from textual.app import ComposeResult
+from textual.containers import Horizontal, ItemGrid, Vertical
 from textual.screen import Screen
-from textual.widgets import DataTable, Header, Label
+from textual.widgets import Header, Label, ListItem, ListView, Static
 
-from slurm_client.rest_api import PartitionListMessage, all_partitions
+from slurm_client.rest_api.partitions import (
+    PartitionDetails,
+    ResourcesDict,
+    partition_details,
+)
 from slurm_client.screens.error import ErrorScreen, NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
+from slurm_client.widgets.resource import ResourceBar
+
+value_re = re.compile(r"(?P<value>[0-9]+)(?P<units>[a-zA-Z]+)?")
 
 
-class PartitionsSummary(Screen):
+def _split_value(value: str | None) -> (int, str | None):
+    if value is None:
+        return 0, None
+
+    match = value_re.fullmatch(value)
+    if match is None:
+        raise ValueError(f"cannot parse value: {value}")
+
+    numeric_value = int(match.group("value"))
+    units = match.group("units")
+
+    return numeric_value, units
+
+
+def _render_resource(name: str, total: str, used: str | None) -> ResourceBar:
+    total_value, total_units = _split_value(total)
+    used_value, used_units = _split_value(used)
+
+    if total_units != used_units and used != "":
+        raise ValueError(f"mismatching units ({total_units} != {used_units}")
+
+    return ResourceBar(used=used_value, total=total_value, units=total_units)
+
+
+def _render_resources(resources: ResourcesDict) -> dict[str, ResourceBar]:
+    total = resources["total"]
+    used = resources["used"]
+
+    return {name: _render_resource(name, total[name], used.get(name)) for name in total}
+
+
+class PartitionDetails(Screen):
     BINDINGS = [
         ("escape", "app.pop_screen", "Back"),
         ("Ctrl+g", "refresh", "Refresh"),
     ]
     CSS_PATH = "partitions.tcss"
 
-    ROW_NAMES = ["name", "total_nodes", "total_cpus", "state"]
+    def __init__(self, partition_name: str, **kwargs):
+        super().__init__(**kwargs)
+
+        self.partition_name = partition_name
+
+        self.resource_widgets = None
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Label("Partitions", id="title")
-        yield DataTable()
+        with Horizontal():
+            yield Label("Partition", id="title")
+        yield Static(id="alternate")
+
+        with Vertical():
+            yield ListView(id="states", classes="details")
+            yield ItemGrid(id="tres", regular=True)
+            yield ListView(id="nodes", classes="details")
+
         yield SlurmClientFooter()
 
     def on_mount(self) -> None:
-        table = self.query_one(DataTable)
-        table.cursor_type = "row"
-        table.zebra_stripes = True
-        table.add_columns(*self.ROW_NAMES)
+        states = self.query_one("ListView#states")
+        states.border_title = "States"
 
-        self.run_worker(self.fetch_partitions())
+        resources = self.query_one("#tres")
+        resources.border_title = "Tracked resources"
+
+        nodes = self.query_one("ListView#nodes")
+        nodes.border_title = "Nodes"
+
+        self.run_worker(self.fetch_partition_details(initial=True))
         self.run_worker(self.app.ping())
 
-    async def fetch_partitions(self):
-        r = await self.app.query_api(all_partitions)
+    async def fetch_partition_details(self, initial=False):
+        request = partition_details(partition_name=self.partition_name)
+        r = await self.app.query_api(request)
         if r.status_code != httpx.codes.OK:
             self.post_message(NetworkError(r))
             return
 
-        msg = all_partitions.response_parser(r.json())
+        msg = request.response_parser(r.json())
         self.post_message(msg)
 
-    @on(PartitionListMessage)
-    async def display_partitions_summary(self, msg: PartitionListMessage) -> None:
-        table = self.query_one(DataTable)
-        table.clear()
-        for partition in msg.partitions:
-            entry = {
-                "name": partition["name"],
-                "total_nodes": partition["nodes"]["total"],
-                "total_cpus": partition["cpus"]["total"],
-                "state": partition["partition"]["state"][0],
-            }
-            table.add_row(*entry.values())
+    @on(PartitionDetails)
+    async def display_partition_details(self, msg: PartitionDetails) -> None:
+        title = self.query_one("Label#title")
+        title.update(f"[b]Partition[/b]: {msg.name}")
+
+        alternate_field = self.query_one("Static#alternate")
+        alternate_field.update(msg.alternate)
+
+        states = self.query_one("ListView#states")
+        states.clear()
+        states.extend([ListItem(Label(state.lower())) for state in msg.states])
+
+        if self.resource_widgets is None:
+            self.resource_widgets = _render_resources(msg.tracked_resources)
+            resources = self.query_one("#tres")
+            for name, widget in self.resource_widgets.items():
+                id_ = f"{name.replace(':', '_').replace('/', '_')}_label"
+                resources.mount(Label(name, id=id_))
+                resources.mount(widget)
+        else:
+            for name, value in msg.tracked_resources["used"].items():
+                widget = self.resource_widgets[name]
+                widget.used = value
+
+        nodes = self.query_one("ListView#nodes")
+        nodes.clear()
+        nodes.extend([ListItem(Label(node)) for node in msg.nodes])
 
     async def action_refresh(self) -> None:
-        await self.fetch_partitions()
+        await self.fetch_partition_details()
 
     @on(NetworkError)
     async def on_network_error(self, msg: NetworkError) -> None:

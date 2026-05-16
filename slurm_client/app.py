@@ -20,6 +20,7 @@ from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.request import Request
 from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.screens.error import ErrorScreen, NetworkError
+from slurm_client.screens.partitions import PartitionDetails
 from slurm_client.screens.sort import SortScreen
 from slurm_client.widgets.footer import SlurmClientFooter
 
@@ -181,6 +182,19 @@ class SlurmClient(App):
                 table = self.query_one(f"DataTable#{active}")
                 table.sort(sort_column)
                 self.sort_column = sort_column
+
+    async def on_data_table_row_selected(self, msg: DataTable.RowSelected) -> None:
+        active_tab = self.current_tab()
+        active_table = self.query_one(f"DataTable#{active_tab}")
+        row = active_table.get_row_at(msg.cursor_row)
+
+        name = row[0]
+        match active_tab:
+            case "partitions":
+                self.push_screen(PartitionDetails(name))
+            case _:
+                # not yet implemented
+                return
 
     async def ping(self) -> None:
         if isinstance(self.screen, ModalScreen):

@@ -1,8 +1,36 @@
-#title {
-    text-align: center;
+PartitionDetails > Horizontal {
+    height: 1;
+    margin: 1 4 1 4;
+    content-align-horizontal: center;
+    align-horizontal: center;
 }
 
-DataTable {
-    align: center top;
+PartitionDetails > Vertical {
+    content-align-horizontal: center;
+    align-horizontal: center;
+}
+
+PartitionDetails Label#title {
+    align-horizontal: center;
+    content-align-horizontal: center;
+}
+
+PartitionDetails #states {
     height: auto;
+    margin: 0 2 0 2;
+    border: solid green;
+}
+
+PartitionDetails #tres {
+    height: auto;
+    margin: 1 2 1 2;
+    border: solid green;
+    grid-size: 2;
+    grid-columns: 1fr 10fr;
+}
+
+PartitionDetails #nodes {
+    margin: 1 2 1 2;
+    border: solid green;
+    height: 20%;
 }

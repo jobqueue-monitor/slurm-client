@@ -2,7 +2,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import ProgressBar, Static
+from textual.widgets import Label, ProgressBar
 
 
 def _color(percent: float) -> str:
@@ -23,16 +23,22 @@ class ResourceBar(Widget):
     # 2. bar with max / taken indicators (similar to htop)
     DEFAULT_CSS = """
     ResourceBar {
-        border: solid red;
+        margin: 0 2 0 2;
+        width: auto;
+        height: auto;
     }
 
-    ResourceBar ProgressBar {
+    ResourceBar > Horizontal {
+       width: auto;
+       height: auto;
+    }
+
+    ResourceBar #label {
         padding: 0 2 0 2;
     }
 
     ResourceBar Bar > .bar--bar {
-        color: $primary;
-        background: $primary 30%;
+        color: green;
     }
     """
 
@@ -41,7 +47,7 @@ class ResourceBar(Widget):
     def compose(self) -> ComposeResult:
         with Horizontal():
             yield ProgressBar(id="bar", show_eta=False, show_percentage=False)
-            yield Static("", id="label")
+            yield Label(id="label")
 
     def __init__(self, used: float, total: float, units: str | None, **kwargs):
         super().__init__(**kwargs)
@@ -79,23 +85,60 @@ class ResourceBar(Widget):
 
         bar_widget = bar.query_one("Bar")
         bar_widget.styles.color = color
-        bar_widget.styles.background = f"{color} 30%"
 
 
-if __name__ == "__main__":
-    from textual.app import App
+class ResourceWidget(Widget):
+    DEFAULT_CSS = """
+    ResourceWidget {
+        height: auto;
+        width: auto;
+    }
 
-    class ResourceApp(App):
-        def compose(self):
-            yield ResourceBar(used=0.0, total=10.0, units=None)
+    ResourceWidget #resource_name {
+        width: 20;
+    }
+    """
 
-        def increment(self):
-            bar = self.query_one(ResourceBar)
-            if bar.used < bar.total:
-                bar.used += 1
+    def __init__(self, name: str, used: int, total: int, units: str, **kwargs):
+        super().__init__(**kwargs)
 
-        def on_mount(self):
-            self.set_interval(0.5, self.increment)
+        self.resource_name = name
+        self.resource_used = used
+        self.resource_total = total
+        self.resource_units = units
 
-    app = ResourceApp()
-    app.run()
+    def compose(self) -> ComposeResult:
+        with Horizontal():
+            yield Label(self.resource_name, id="resource_name")
+            yield ResourceBar(
+                used=self.resource_used,
+                total=self.resource_total,
+                units=self.resource_units,
+                id="resource_bar",
+            )
+
+    @property
+    def used(self) -> int:
+        bar = self.query_one("#resource_bar")
+        return bar.used
+
+    @used.setter
+    def used(self, used: int):
+        bar = self.query_one("#resource_bar")
+        bar.used = used
+
+
+from textual.app import App
+
+
+class ResourceApp(App):
+    def compose(self):
+        yield ResourceWidget(name="cpu", used=0.0, total=10.0, units=None)
+
+    def increment(self):
+        bar = self.query_one(ResourceBar)
+        if bar.used < bar.total:
+            bar.used += 1
+
+    def on_mount(self):
+        self.set_interval(0.5, self.increment)

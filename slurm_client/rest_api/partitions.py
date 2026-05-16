@@ -3,7 +3,9 @@ from typing import Any, TypedDict
 
 from textual.message import Message
 
+from slurm_client.rest_api.nodes import parse_node_list
 from slurm_client.rest_api.request import request
+from slurm_client.rest_api.resources import ResourcesDict, parse_resources
 from slurm_client.rest_api.table_message import TableContentFetched
 
 
@@ -15,10 +17,12 @@ class PartitionListMessage(Message):
 @dataclass
 class PartitionDetails(Message):
     name: str
-    states: list[str]
     alternate: str
 
+    states: list[str]
+
     nodes: list[str]
+    tracked_resources: ResourcesDict
 
 
 class PartitionSummary(TypedDict):
@@ -53,4 +57,22 @@ def partitions_summary(result: dict[str, Any]) -> TableContentFetched:
 
 @request.get("/slurm/{version}/partition/{partition_name}")
 def partition_details(result: dict[str, Any]) -> PartitionDetails:
-    raise ValueError()
+    partition = result["partitions"][0]
+
+    name = partition["name"]
+    alternate = partition["alternate"]
+    nodes = parse_node_list(partition["nodes"])
+    states = partition["partition"]["state"]
+
+    tres = parse_resources(
+        partition["tres"]["configured"],
+        partition.get("tres_used", {"configured": ""})["configured"],
+    )
+
+    return PartitionDetails(
+        name=name,
+        alternate=alternate,
+        states=states,
+        nodes=nodes,
+        tracked_resources=tres,
+    )

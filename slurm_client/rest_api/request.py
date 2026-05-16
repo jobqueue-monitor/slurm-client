@@ -14,7 +14,8 @@ class Request:
     response_parser: Callable[Message, [dict[str, Any]]]
 
     def __call__(self, **kwargs) -> Self:
-        return replace(path=self.path.format(**kwargs))
+        new_path = self.path.format(version="{version}", **kwargs)
+        return replace(self, path=new_path)
 
 
 def _decorator(method: str, path: str, parameters: dict[str, Any] = None):
