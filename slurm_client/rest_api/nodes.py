@@ -25,6 +25,9 @@ def parse_node_list(nodes: dict[str, Any]) -> list[str]:
     configured = nodes["configured"]
 
     globs = node_group_re.findall(configured)
+    if not globs and configured:
+        return configured.split(",")
+
     return list(itertools.chain.from_iterable(_expand_glob(glob) for glob in globs))
 
 
