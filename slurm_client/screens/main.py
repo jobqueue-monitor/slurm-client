@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from textual import on, work
+from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -15,7 +15,6 @@ from slurm_client.rest_api import (
 )
 from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.screens.partitions import PartitionDetails
-from slurm_client.screens.sort import SortScreen
 from slurm_client.widgets.footer import SlurmClientFooter
 
 
@@ -44,9 +43,7 @@ class MainScreen(Screen):
 
         with Vertical(id="content"):
             with Horizontal(id="actions"):
-                with Horizontal():
-                    yield Button("Sort", id="sort")
-                    yield Button("Filters", id="filters")
+                yield Button("Filters", id="filters")
             with TabbedContent(id="tabs"):
                 with TabPane("Partitions", id="partitions", classes="tab"):
                     yield DataTable(id="partitions")
@@ -137,22 +134,6 @@ class MainScreen(Screen):
         table.scroll_y = scroll_y
         if focused:
             table.focus()
-
-    @work
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
-        match event.button.id:
-            case "sort":
-                tabs = self.query_one("TabbedContent")
-                active = tabs.active
-                sort_column = await self.push_screen_wait(
-                    SortScreen(self.COLUMN_NAMES[active])
-                )
-                if sort_column is None:
-                    return
-
-                table = self.query_one(f"DataTable#{active}")
-                table.sort(sort_column)
-                self.sort_column = sort_column
 
     async def on_data_table_row_selected(self, msg: DataTable.RowSelected) -> None:
         active_tab = self.current_tab()
