@@ -1,9 +1,10 @@
-from collections.abc import Callable
 from dataclasses import dataclass, replace
 from functools import partial
-from typing import Any, Literal, Self
+from typing import TYPE_CHECKING
 
-from textual.message import Message
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any, Literal, Self
 
 
 @dataclass
@@ -11,7 +12,7 @@ class Request:
     method: Literal["get", "post"]
     path: str
     parameters: dict[str, Any]
-    response_parser: Callable[Message, [dict[str, Any]]]
+    response_parser: Callable[Any, [dict[str, Any]]]
 
     def path_parameters(self, **kwargs) -> Self:
         new_path = self.path.format(version="{version}", **kwargs)
