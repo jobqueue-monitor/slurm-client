@@ -91,7 +91,10 @@ def resource_usage(result: dict[str, Any], partition: str) -> ResourceDict:
     nodes = [
         node
         for node in result["nodes"]
-        if partition in node.get("partitions", []) and node["state"] == ["UP"]
+        if (
+            partition in node.get("partitions", [])
+            and set(node["state"]).intersection({"IDLE", "MIXED"})
+        )
     ]
 
     units = {
