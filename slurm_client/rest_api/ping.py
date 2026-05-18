@@ -29,11 +29,11 @@ class PingMessage(Message):
 @request.get("/slurm/{version}/ping")
 def ping(result: dict[str, Any]) -> PingMessage:
     if "pings" not in result or len(result["pings"]) == 0:
-        return {
-            "server": "unknown",
-            "latency": float("nan"),
-            "version": "n/a",
-        }
+        return PingMessage(
+            server="unknown",
+            latency=float("nan"),
+            version="n/a",
+        )
 
     p = result["pings"][0]
     slurm_version = result["meta"]["slurm"]["release"]
