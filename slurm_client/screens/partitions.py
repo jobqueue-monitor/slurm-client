@@ -27,11 +27,17 @@ def _render_resource(name: str, total: str, used: str | None) -> ResourceBar:
     return ResourceBar(used=used_value, total=total_value, units=total_units)
 
 
-def _render_resources(resources: ResourcesDict) -> dict[str, ResourceBar]:
+def _render_resources(
+    resources: ResourcesDict, exclude: set[str]
+) -> dict[str, ResourceBar]:
     total = resources["total"]
     used = resources["used"]
 
-    return {name: _render_resource(name, total[name], used.get(name)) for name in total}
+    return {
+        name: _render_resource(name, total[name], used.get(name))
+        for name in total
+        if name not in exclude
+    }
 
 
 class PartitionDetails(Screen):
@@ -105,7 +111,9 @@ class PartitionDetails(Screen):
         states.extend([ListItem(Label(state.lower())) for state in msg.states])
 
         if self.resource_widgets is None:
-            self.resource_widgets = _render_resources(msg.tracked_resources)
+            self.resource_widgets = _render_resources(
+                msg.tracked_resources, exclude={"billing"}
+            )
             resources = self.query_one("#tres")
             for name, widget in self.resource_widgets.items():
                 id_ = f"{name.replace(':', '_').replace('/', '_')}_label"
