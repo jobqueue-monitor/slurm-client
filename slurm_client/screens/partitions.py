@@ -77,7 +77,7 @@ class PartitionDetails(Screen):
         nodes = self.query_one("ListView#nodes")
         nodes.border_title = "Nodes"
 
-        self.run_worker(self.fetch_partition_details(initial=True))
+        self.run_worker(self.fetch_partition_details())
         self.run_worker(self.app.ping())
 
     async def fetch_partition_details(self):
