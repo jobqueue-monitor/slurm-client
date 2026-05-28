@@ -3,7 +3,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, ItemGrid, Vertical
 from textual.screen import Screen
-from textual.widgets import Header, Label, ListItem, ListView, Static
+from textual.widgets import DataTable, Header, Label, ListItem, ListView, Static
 
 from slurm_client.rest_api.nodes import node_details
 from slurm_client.rest_api.partitions import (
@@ -41,6 +41,9 @@ def _render_resources(
     }
 
 
+node_columns = ["name", "address", "state"]
+
+
 class PartitionDetails(Screen):
     BINDINGS = [
         ("escape", "app.pop_screen", "Back"),
@@ -64,7 +67,7 @@ class PartitionDetails(Screen):
         with Vertical():
             yield ListView(id="states", classes="details")
             yield ItemGrid(id="tres", regular=True)
-            yield ListView(id="nodes", classes="details")
+            yield DataTable(id="nodes", classes="details")
 
         yield SlurmClientFooter()
 
@@ -75,8 +78,9 @@ class PartitionDetails(Screen):
         resources = self.query_one("#tres")
         resources.border_title = "Tracked resources"
 
-        nodes = self.query_one("ListView#nodes")
+        nodes = self.query_one("DataTable#nodes")
         nodes.border_title = "Nodes"
+        nodes.add_columns(*node_columns)
 
         self.run_worker(self.fetch_partition_details())
         self.run_worker(self.app.ping())
@@ -102,7 +106,7 @@ class PartitionDetails(Screen):
             self.post_message(NetworkError(r))
             return
 
-        msg.nodes = node_details.response_parser(r.json())
+        msg.nodes = node_details.response_parser(r.json(), msg.nodes)
 
         self.post_message(msg)
 
@@ -132,9 +136,11 @@ class PartitionDetails(Screen):
                 widget = self.resource_widgets[name]
                 widget.used = value
 
-        nodes = self.query_one("ListView#nodes")
+        nodes = self.query_one("DataTable#nodes")
         nodes.clear()
-        nodes.extend([ListItem(Label(node)) for node in msg.nodes])
+        for row in msg.nodes:
+            filtered = [v for k, v in row.items() if k in node_columns]
+            nodes.add_row(*filtered)
 
     async def action_refresh(self) -> None:
         await self.fetch_partition_details()
