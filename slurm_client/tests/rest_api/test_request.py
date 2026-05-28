@@ -40,7 +40,7 @@ class TestRequest:
 
 
 def test_decorator():
-    def f(r):
+    def f(r):  # pragma: no cover
         return "a"
 
     expected = request.Request(
@@ -61,7 +61,7 @@ def test_decorator():
 
 
 def test_request_selector():
-    def f(r):
+    def f(r):  # pragma: no cover
         return "a"
 
     expected = request.Request(
