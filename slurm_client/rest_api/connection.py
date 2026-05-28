@@ -63,7 +63,7 @@ async def refresh_token(con: SSHConnection, lifespan: dt.timedelta) -> Token:
     )
 
     if result.returncode != 0:
-        error = result.stderr.decode()
+        error = result.stderr
         raise RuntimeError(f"failed to fetch a token: {error}")
 
     return Token.from_expr(result.stdout.strip(), now + lifespan)

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 import httpx
 from textual.app import ComposeResult
@@ -14,7 +15,23 @@ class NetworkError(Message):
 
 
 @dataclass
-class SSHError(Message):
+class FatalError(Message):
+    context: ClassVar[str]
+    reason: str
+
+    def render(self):
+        return "\n".join([self.context, "", f"[i]{self.reason}[/i]"])
+
+
+@dataclass
+class SSHError(FatalError):
+    context: ClassVar[str] = "Connecting to the ssh server failed:"
+    reason: str
+
+
+@dataclass
+class TokenError(FatalError):
+    context: ClassVar[str] = "Failed to create a token:"
     reason: str
 
 

@@ -15,6 +15,7 @@ from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.request import Request
 from slurm_client.screens.error import (
     ErrorScreen,
+    FatalError,
     FatalErrorScreen,
     NetworkError,
     SSHError,
@@ -93,9 +94,12 @@ class SlurmClient(App):
         )
 
         if self.token is None or not self.token.is_valid():
-            self.token = await refresh_token(
-                self.con.ssh, lifespan=self.config.token_lifespan
-            )
+            try:
+                self.token = await refresh_token(
+                    self.con.ssh, lifespan=self.config.token_lifespan
+                )
+            except RuntimeError as e:
+                self.post_message(SSHError(e))
 
         url = f"{self.config.address}/{path.lstrip('/')}"
 
@@ -116,9 +120,9 @@ class SlurmClient(App):
         )
         self.push_screen(ErrorScreen(error))
 
-    async def on_ssherror(self, msg: SSHError):
-        reason = msg.reason
-        error = f"Connecting to the ssh server failed: [i]{reason}[/i]"
+    @on(FatalError)
+    async def on_fatalerror(self, msg: FatalError):
+        error = msg.render()
 
         def check_quit(quit: bool | None) -> None:
             self.exit(1)

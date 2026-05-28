@@ -4,7 +4,7 @@ ParametrizedErrorScreen {
 
 ParametrizedErrorScreen > Grid#dialog {
     border: round red 80%;
-    height: 11;
+    height: 13;
     width: 60;
 
     grid-size: 1;
