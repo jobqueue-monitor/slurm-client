@@ -1,5 +1,6 @@
 import itertools
 import re
+from collections.abc import Sequence
 from typing import Any, TypedDict
 
 from slurm_client.rest_api.request import request
@@ -54,3 +55,20 @@ def nodes_summary(result: dict[str, Any]) -> list[NodeSummary]:
     ]
 
     return TableContentFetched("nodes", rows)
+
+
+@request.get("/slurm/{version}/nodes")
+def node_details(result: dict[str, Any], names: Sequence[str]) -> list[NodeSummary]:
+    nodes = result.get("nodes", [])
+
+    return [
+        {
+            "name": node["name"],
+            "address": node["address"],
+            "hostname": node["hostname"],
+            "state": node["state"],
+            "partitions": ", ".join(node["partitions"]),
+        }
+        for node in nodes
+        if node["name"] in names
+    ]

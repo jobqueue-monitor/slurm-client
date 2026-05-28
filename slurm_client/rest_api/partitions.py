@@ -4,7 +4,7 @@ from typing import Any, TypedDict
 
 from textual.message import Message
 
-from slurm_client.rest_api.nodes import parse_node_list
+from slurm_client.rest_api.nodes import NodeSummary, parse_node_list
 from slurm_client.rest_api.request import request
 from slurm_client.rest_api.resources import (
     ResourceDict,
@@ -29,7 +29,7 @@ class PartitionDetails(Message):
 
     states: list[str]
 
-    nodes: list[str]
+    nodes: list[str] | list[NodeSummary]
     tracked_resources: ResourcesDict
 
 
