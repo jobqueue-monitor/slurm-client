@@ -59,6 +59,11 @@ async def refresh_token(con: SSHConnection, lifespan: dt.timedelta) -> Token:
     now = dt.datetime.now(tz=dt.UTC)
 
     result = await con.handle.run(
-        f"scontrol token lifespan={int(lifespan.total_seconds())}", check=True
+        f"scontrol token lifespan={int(lifespan.total_seconds())}"
     )
+
+    if result.returncode != 0:
+        error = result.stderr.decode()
+        raise RuntimeError(f"failed to fetch a token: {error}")
+
     return Token.from_expr(result.stdout.strip(), now + lifespan)
