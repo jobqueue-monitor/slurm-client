@@ -11,4 +11,4 @@ class TableContentFetched(Message):
 
     def rows(self):
         for row in self.content:
-            yield list(row.values())
+            yield list(row.render_summary().values())

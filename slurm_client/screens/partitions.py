@@ -5,7 +5,7 @@ from textual.containers import Horizontal, ItemGrid, Vertical
 from textual.screen import Screen
 from textual.widgets import Header, Label, ListItem, ListView, Static
 
-from slurm_client.rest_api.nodes import node_details
+from slurm_client.rest_api.nodes import all_nodes
 from slurm_client.rest_api.partitions import (
     PartitionDetails,
     ResourcesDict,
@@ -103,12 +103,16 @@ class PartitionDetails(Screen):
             return
         msg.tracked_resources["used"] = request.response_parser(r.json())
 
-        r = await self.app.query_api(node_details)
+        r = await self.app.query_api(all_nodes)
         if r.status_code != httpx.codes.OK:
             self.post_message(NetworkError(r))
             return
 
-        msg.nodes = node_details.response_parser(r.json(), msg.nodes)
+        msg.nodes = [
+            node
+            for node in all_nodes.response_parser(r.json())
+            if node.name in msg.nodes
+        ]
 
         self.post_message(msg)
 

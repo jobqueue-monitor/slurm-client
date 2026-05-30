@@ -8,11 +8,9 @@ from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
 
-from slurm_client.rest_api import (
-    jobs_summary,
-    nodes_summary,
-    partitions_summary,
-)
+from slurm_client.rest_api.jobs import all_jobs
+from slurm_client.rest_api.nodes import all_nodes
+from slurm_client.rest_api.partitions import all_partitions
 from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.screens.partitions import PartitionDetails
 from slurm_client.widgets.footer import SlurmClientFooter
@@ -102,9 +100,9 @@ class MainScreen(Screen):
 
     async def _fetch_table_data(self, kind: str) -> None:
         requests = {
-            "partitions": partitions_summary,
-            "jobs": jobs_summary,
-            "nodes": nodes_summary,
+            "partitions": all_partitions,
+            "jobs": all_jobs,
+            "nodes": all_nodes,
         }
         request = requests[kind]
         r = await self.app.query_api(request)

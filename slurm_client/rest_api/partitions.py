@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, TypedDict
+from typing import Any, ClassVar, TypedDict
 
 from textual.message import Message
 
@@ -21,6 +21,42 @@ class PartitionListMessage(Message):
     partitions: list[dict[str, Any]]
 
 
+class PartitionSummary(TypedDict):
+    name: str
+
+    total_nodes: int
+    total_cpus: int
+
+    states: list[str]
+
+
+@dataclass
+class Partition:
+    summary_columns: ClassVar[list[str]] = [
+        "name",
+        "total_nodes",
+        "total_cpus",
+        "states",
+    ]
+
+    name: str
+    alternate: str
+
+    states: list[str]
+
+    cpus: int
+    nodes: list[str]
+    tracked_resources: ResourceDict
+
+    def render_summary(self) -> PartitionSummary:
+        return {
+            "name": self.name,
+            "total_nodes": len(self.nodes),
+            "total_cpus": self.cpus,
+            "states": self.states,
+        }
+
+
 @dataclass
 class PartitionDetails(Message):
     name: str
@@ -32,17 +68,21 @@ class PartitionDetails(Message):
     tracked_resources: ResourcesDict
 
 
-class PartitionSummary(TypedDict):
-    name: str
-    total_nodes: int
-    total_cpus: int
-    state: str
+def parse_partition(partition: dict[str, Any]) -> Partition:
+    return Partition(
+        name=partition["name"],
+        alternate=partition["alternate"],
+        states=partition["partition"]["state"],
+        cpus=partition["cpus"]["total"],
+        nodes=parse_node_list(partition["nodes"]),
+        tracked_resources=parse_resources(partition["tres"]["configured"], ""),
+    )
 
 
 @request.get("/slurm/{version}/partitions")
-def all_partitions(result: dict[str, Any]) -> PartitionListMessage:
+def all_partitions(result: dict[str, Any]) -> list[Partition]:
     partitions = result.get("partitions", [])
-    return PartitionListMessage(partitions)
+    return [parse_partition(partition) for partition in partitions]
 
 
 @request.get("/slurm/{version}/partitions")

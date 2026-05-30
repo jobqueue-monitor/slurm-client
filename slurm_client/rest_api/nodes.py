@@ -1,9 +1,8 @@
 import datetime as dt
 import itertools
 import re
-from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import Any, Self, TypedDict
+from dataclasses import asdict, dataclass
+from typing import Any, ClassVar, Self, TypedDict
 
 from slurm_client.rest_api.parsers import parse_datetime, parse_value_set
 from slurm_client.rest_api.request import request
@@ -40,32 +39,6 @@ def parse_node_list(nodes: dict[str, Any]) -> list[str]:
     return list(itertools.chain.from_iterable(_expand_glob(glob) for glob in globs))
 
 
-class NodeSummary(TypedDict):
-    name: str
-    address: str
-    hostname: str
-    state: list[str]
-    partitions: list[str]
-
-
-@request.get("/slurm/{version}/nodes")
-def nodes_summary(result: dict[str, Any]) -> list[NodeSummary]:
-    nodes = result.get("nodes", [])
-
-    rows = [
-        {
-            "name": node["name"],
-            "address": node["address"],
-            "hostname": node["hostname"],
-            "state": node["state"],
-            "partitions": ", ".join(node["partitions"]),
-        }
-        for node in nodes
-    ]
-
-    return rows
-
-
 @dataclass
 class NodeChangeReason:
     reason: str
@@ -78,59 +51,6 @@ class NodeChangeReason:
             return None
 
         return cls(reason, changed_at, set_by_user)
-
-
-@dataclass
-class NodeDetails:
-    # node info
-    name: str
-    address: str
-    hostname: str
-
-    features: list[str]
-    active_features: list[str]
-
-    state: list[str]
-    reason: NodeChangeReason | None
-    comment: str
-
-    boot_time: dt.datetime
-    last_busy: dt.datetime | None
-
-    operating_system: str
-
-    architecture: str
-    boards: int
-    cores: int
-    sockets: int
-
-    partitions: list[str]
-
-    # resources
-    # -- individual resources
-    cpu_binding: int
-    cpu_load: int
-
-    cpus: int
-    effective_cpus: int
-    threads: int
-
-    real_memory: int
-
-    # -- system reservations
-    specialized_cores: int
-    specialized_cpus: str
-    specialized_memory: int
-
-    # -- allocated status
-    alloc_cpus: int
-    alloc_memory: int
-    alloc_idle_cpus: int
-    free_mem: int | None
-
-    # -- combined resources
-    trackable_resources: ResourcesDict
-    generic_resources: GenericResourcesDict
 
 
 key_translations = {}
@@ -187,6 +107,78 @@ combined_keys = {
 }
 
 
+class NodeSummary(TypedDict):
+    name: str
+    address: str
+    hostname: str
+    state: list[str]
+    partitions: list[str]
+
+
+@dataclass
+class NodeDetails:
+    summary_columns: ClassVar[list[str]] = [
+        "name",
+        "address",
+        "hostname",
+        "state",
+        "partitions",
+    ]
+
+    # node info
+    name: str
+    address: str
+    hostname: str
+
+    features: list[str]
+    active_features: list[str]
+
+    state: list[str]
+    reason: NodeChangeReason | None
+    comment: str
+
+    boot_time: dt.datetime
+    last_busy: dt.datetime | None
+
+    operating_system: str
+
+    architecture: str
+    boards: int
+    cores: int
+    sockets: int
+
+    partitions: list[str]
+
+    # resources
+    # -- individual resources
+    cpu_binding: int
+    cpu_load: int
+
+    cpus: int
+    effective_cpus: int
+    threads: int
+
+    real_memory: int
+
+    # -- system reservations
+    specialized_cores: int
+    specialized_cpus: str
+    specialized_memory: int
+
+    # -- allocated status
+    alloc_cpus: int
+    alloc_memory: int
+    alloc_idle_cpus: int
+    free_mem: int | None
+
+    # -- combined resources
+    trackable_resources: ResourcesDict
+    generic_resources: GenericResourcesDict
+
+    def render_summary(self) -> NodeSummary:
+        return {k: v for k, v in asdict(self).items() if k in self.summary_columns}
+
+
 def parse_node_details(details: dict[str, Any]) -> NodeDetails:
     translated = {
         key_translations.get(key, key): value_converters.get(key, identity)(value)
@@ -204,14 +196,14 @@ def parse_node_details(details: dict[str, Any]) -> NodeDetails:
 
 
 @request.get("/slurm/{version}/nodes")
-def node_details(
-    result: dict[str, Any], names: Sequence[str] | None = None
-) -> list[NodeSummary]:
+def all_nodes(result: dict[str, Any]) -> list[NodeDetails]:
     nodes = result.get("nodes", [])
 
-    if names is None:
-        names = []
+    return [parse_node_details(node) for node in nodes]
 
-    return [
-        parse_node_details(node) for node in nodes if not names or node["name"] in names
-    ]
+
+@request.get("/slurm/{version}/node/{node_name}")
+def node_details(result: dict[str, Any]) -> NodeDetails:
+    node = result["nodes"][0]
+
+    return parse_node_details(node)
