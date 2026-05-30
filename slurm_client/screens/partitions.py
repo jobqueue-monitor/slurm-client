@@ -3,7 +3,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, ItemGrid, Vertical
 from textual.screen import Screen
-from textual.widgets import DataTable, Header, Label, ListItem, ListView, Static
+from textual.widgets import Header, Label, ListItem, ListView, Static
 
 from slurm_client.rest_api.nodes import node_details
 from slurm_client.rest_api.partitions import (
@@ -16,6 +16,7 @@ from slurm_client.rest_api.resources import split_value
 from slurm_client.screens.error import ErrorScreen, NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
 from slurm_client.widgets.resource import ResourceBar
+from slurm_client.widgets.table import SortableTable
 
 
 def _render_resource(name: str, total: str, used: str | None) -> ResourceBar:
@@ -67,7 +68,7 @@ class PartitionDetails(Screen):
         with Vertical():
             yield ListView(id="states", classes="details")
             yield ItemGrid(id="tres", regular=True)
-            yield DataTable(id="nodes", classes="details")
+            yield SortableTable(node_columns, id="nodes", classes="details")
 
         yield SlurmClientFooter()
 
@@ -78,9 +79,10 @@ class PartitionDetails(Screen):
         resources = self.query_one("#tres")
         resources.border_title = "Tracked resources"
 
-        nodes = self.query_one("DataTable#nodes")
+        nodes = self.query_one("SortableTable#nodes")
         nodes.border_title = "Nodes"
-        nodes.add_columns(*node_columns)
+        nodes.cursor_type = "row"
+        nodes.zebra_stripes = True
 
         self.run_worker(self.fetch_partition_details())
         self.run_worker(self.app.ping())
@@ -136,11 +138,11 @@ class PartitionDetails(Screen):
                 widget = self.resource_widgets[name]
                 widget.used = value
 
-        nodes = self.query_one("DataTable#nodes")
-        nodes.clear()
-        for row in msg.nodes:
-            filtered = [v for k, v in row.items() if k in node_columns]
-            nodes.add_row(*filtered)
+        nodes = self.query_one("SortableTable#nodes")
+        filtered_rows = [
+            [v for k, v in row.items() if k in node_columns] for row in msg.nodes
+        ]
+        nodes.replace_contents(filtered_rows)
 
     async def action_refresh(self) -> None:
         await self.fetch_partition_details()
