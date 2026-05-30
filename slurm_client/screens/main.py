@@ -119,7 +119,7 @@ class MainScreen(Screen):
     async def on_data_table_row_selected(self, msg: DataTable.RowSelected) -> None:
         active_tab = self.current_tab()
         active_table = self.query_one(f"SortableTable#{active_tab}")
-        row = active_table.data_table.get_row_at(msg.cursor_row)
+        row = active_table.get_row_at(msg.cursor_row)
 
         name = row[0]
         match active_tab:
