@@ -1,6 +1,8 @@
 import re
 from typing import Any, NotRequired, TypedDict
 
+from slurm_client.utils import identity
+
 value_re = re.compile(r"(?P<value>[0-9]+)(?P<units>[a-zA-Z]+)?")
 resource_re = re.compile(r"(?P<key>[-a-z0-9_:/]+)=(?P<value>[0-9M]+)")
 generic_resource_re = re.compile(
@@ -81,10 +83,6 @@ def parse_resources(total: str, used: str) -> ResourcesDict:
     }
 
 
-def noop(x: Any) -> Any:
-    return x
-
-
 def extract_resource_group(match) -> dict[str, Any]:
     translations = {"S": "socket_affinity", "IDX": "index"}
     converters = {"quantity": int}
@@ -104,7 +102,7 @@ def extract_resource_group(match) -> dict[str, Any]:
         modifier = {}
 
     resource = {
-        name: converters.get(name, noop)(match.group(name))
+        name: converters.get(name, identity)(match.group(name))
         for name in ["type", "name", "quantity"]
     }
 
