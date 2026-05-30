@@ -35,7 +35,7 @@ class SortableTable(DataTable):
     @on(Click)
     async def on_click(self, event: Click) -> None:
         widget = event.widget
-        if not isinstance(widget, DataTable):
+        if not isinstance(widget, DataTable) or widget.hover_row != -1:
             return
 
         hover_column = self._column_names[widget.hover_column]
