@@ -115,6 +115,25 @@ class NodeSummary(TypedDict):
     partitions: list[str]
 
 
+class NodeInfo(TypedDict):
+    address: str
+    hostname: str
+    state: list[str]
+
+    comment: str
+
+    boot_time: dt.datetime
+    last_busy: dt.datetime | None
+
+    operating_system: str
+
+    architecture: str
+    boards: int
+    sockets: int
+
+    partitions: list[str]
+
+
 @dataclass
 class NodeDetails:
     summary_columns: ClassVar[list[str]] = [
@@ -124,6 +143,22 @@ class NodeDetails:
         "state",
         "partitions",
     ]
+    info_columns: ClassVar[list[str]] = [
+        "address",
+        "hostname",
+        "state",
+        "reason",
+        "comment",
+        "boot_time",
+        "last_busy",
+        "operating_system",
+        "architecture",
+        "boards",
+        "sockets",
+        "partitions",
+    ]
+
+    time: dt.datetime
 
     # node info
     name: str
@@ -178,8 +213,11 @@ class NodeDetails:
     def render_summary(self) -> NodeSummary:
         return {k: v for k, v in asdict(self).items() if k in self.summary_columns}
 
+    def render_info(self) -> NodeInfo:
+        return {k: v for k, v in asdict(self).items() if k in self.info_columns}
 
-def parse_node_details(details: dict[str, Any]) -> NodeDetails:
+
+def parse_node_details(time: dt.datetime, details: dict[str, Any]) -> NodeDetails:
     translated = {
         key_translations.get(key, key): value_converters.get(key, identity)(value)
         for key, value in details.items()
@@ -192,18 +230,20 @@ def parse_node_details(details: dict[str, Any]) -> NodeDetails:
             del translated[name]
         translated[new_name] = converter(*values)
 
-    return NodeDetails(**translated)
+    return NodeDetails(time=time, **translated)
 
 
 @request.get("/slurm/{version}/nodes")
 def all_nodes(result: dict[str, Any]) -> list[NodeDetails]:
     nodes = result.get("nodes", [])
+    time = parse_datetime(result["last_update"])
 
-    return [parse_node_details(node) for node in nodes]
+    return [parse_node_details(time, node) for node in nodes]
 
 
 @request.get("/slurm/{version}/node/{node_name}")
 def node_details(result: dict[str, Any]) -> NodeDetails:
     node = result["nodes"][0]
+    time = parse_datetime(result["last_update"])
 
-    return parse_node_details(node)
+    return parse_node_details(time, node)

@@ -1,0 +1,191 @@
+import datetime as dt
+from dataclasses import dataclass
+from typing import Any, cast
+
+import httpx
+from textual import on
+from textual.app import ComposeResult
+from textual.containers import Horizontal, ItemGrid, Vertical
+from textual.events import ScreenResume, ScreenSuspend
+from textual.message import Message
+from textual.screen import Screen
+from textual.widgets import Header, Label
+from textual_plotext import PlotextPlot
+
+from slurm_client.rest_api.nodes import NodeDetails, node_details
+from slurm_client.screens.error import NetworkError
+from slurm_client.widgets.footer import SlurmClientFooter
+
+
+@dataclass
+class NodeDetailsFetched(Message):
+    details: NodeDetails
+
+
+def render_state(states: list[str]) -> str:
+    return ", ".join(states)
+
+
+def render_reason(r: dict[str, Any]) -> str:
+    return f"{r['reason']} (changed by {r['set_by_user']} at {r['changed_at']:%Y-%m-%d %H:%M:%S}"
+
+
+def render(name: str, value: Any) -> str:
+    if value is None:
+        return "n/a"
+    match name:
+        case "boot_time" | "last_busy":
+            return value.isoformat()
+        case "partitions":
+            return ", ".join(value)
+        case "state":
+            return render_state(value)
+        case "reason":
+            return render_reason(value)
+
+    match value:
+        case str():
+            return cast(str, value)
+        case int():
+            return str(value)
+        case _:
+            return str(value)
+
+
+date_pattern = "Y-m-d H:M:S"
+date_format = "".join(f"%{char}" if char.isalpha() else char for char in date_pattern)
+
+
+class NodeDetails(Screen):
+    BINDINGS = [
+        ("escape", "app.pop_screen", "Back"),
+        ("Ctrl+g", "refresh", "Refresh"),
+    ]
+
+    CSS_PATH = "nodes.tcss"
+
+    def __init__(self, node_name: str, *, max_data_points: int = 200, **kwargs):
+        super().__init__(**kwargs)
+
+        self.node_name = node_name
+        self.max_data_points = max_data_points
+
+        self.time = []
+        self.cpu_load = []
+        self.used_memory = []
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+
+        with Horizontal():
+            yield Label("Node", id="title")
+
+        with Vertical():
+            yield ItemGrid(id="node-info")
+            yield ItemGrid(id="resources")
+
+            with Horizontal(id="live-usage"):
+                yield PlotextPlot(id="live-cpu", classes="plot")
+                yield PlotextPlot(id="live-mem", classes="plot")
+
+        yield SlurmClientFooter()
+
+    def on_mount(self):
+        node_info = self.query_one("ItemGrid#node-info")
+        node_info.border_title = "Details"
+
+        resources = self.query_one("#resources")
+        resources.border_title = "Resources"
+
+        live_usage = self.query_one("#live-usage")
+        live_usage.border_title = "Resource Usage"
+
+        live_cpu = self.query_one("PlotextPlot#live-cpu")
+        live_cpu.plt.xlabel("time (UTC)")
+        live_cpu.plt.title("CPU load (%)")
+
+        live_mem = self.query_one("PlotextPlot#live-mem")
+        live_mem.plt.xlabel("time (UTC)")
+        live_mem.plt.title("Used memory (MB)")
+
+        self.run_worker(self.app.ping())
+        self.app.timers["node:details"] = self.app.set_interval(
+            self.app.config.ping_interval, self.fetch_node_details
+        )
+
+    @on(ScreenSuspend)
+    def on_screen_suspend(self) -> None:
+        for name, timer in self.app.timers.items():
+            if not name.startswith("main:"):
+                continue
+            timer.pause()
+
+    @on(ScreenResume)
+    def on_screen_resume(self, event: ScreenResume) -> None:
+        for name, timer in self.app.timers.items():
+            if not name.startswith("main:"):
+                continue
+            timer.resume()
+
+    async def fetch_node_details(self):
+        request = node_details.path_parameters(node_name=self.node_name)
+        r = await self.app.query_api(request)
+        if r.status_code != httpx.codes.OK:
+            self.post_message(NetworkError(r))
+            return
+
+        parsed = request.response_parser(r.json())
+        msg = NodeDetailsFetched(parsed)
+
+        self.post_message(msg)
+
+    def push_data(
+        self, time: dt.datetime, cpu_load: int | None, used_memory: int | None
+    ):
+        if len(self.time) >= self.max_data_points:
+            self.time.pop(0)
+            self.cpu_load.pop(0)
+            self.free_mem.pop(0)
+
+        self.time.append(time)
+        self.cpu_load.append(cpu_load)
+        self.used_memory.append(used_memory)
+
+    @on(NodeDetailsFetched)
+    async def display_node_details(self, msg: NodeDetailsFetched) -> None:
+        details = msg.details
+
+        title = self.query_one("Label#title")
+        title.update(f"[b]Node[/b]: {details.name}")
+
+        node_info = self.query_one("#node-info")
+        for key, value in details.render_info().items():
+            value_id = f"node-info-value-{key}"
+            if labels := node_info.query(f"Label#{value_id}"):
+                value_label = labels[0]
+                value_label.update(render(key, value))
+                continue
+
+            key_label = Label(f"[b]{key}[/b]")
+            value_label = Label(render(key, value), id=value_id)
+
+            node_info.mount(key_label)
+            node_info.mount(value_label)
+
+        self.push_data(details.time, details.cpu_load, details.free_mem)
+        if len(self.time) >= 2:
+            time = [t.strftime(date_format) for t in self.time]
+
+            cpu = self.query_one("PlotextPlot#live-cpu")
+            cpu.plt.clear_data()
+            cpu.plt.date_form(date_pattern)
+            cpu.plt.plot(time, self.cpu_load, color="blue", marker="braille")
+            cpu.plt.ylim(lower=0.0)
+            cpu.refresh()
+
+            mem = self.query_one("PlotextPlot#live-mem")
+            mem.plt.clear_data()
+            mem.plt.date_form(date_pattern)
+            mem.plt.plot(time, self.used_memory, color="orange", marker="braille")
+            mem.plt.ylim(lower=0.0)
+            mem.refresh()

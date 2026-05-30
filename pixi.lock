@@ -82,6 +82,7 @@ environments:
         - conda: https://conda.anaconda.org/conda-forge/noarch/pathspec-1.1.1-pyhd8ed1ab_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/pexpect-4.9.0-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.9.6-pyhcf101f3_0.conda
+        - conda: https://conda.anaconda.org/conda-forge/noarch/plotext-5.3.2-pyhff2d567_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/prompt-toolkit-3.0.52-pyha770c72_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/propcache-0.3.1-pyhe1237c8_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/ptyprocess-0.7.0-pyhd8ed1ab_1.conda
@@ -97,6 +98,7 @@ environments:
         - conda: https://conda.anaconda.org/conda-forge/noarch/stack_data-0.6.3-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/textual-8.2.6-pyhcf101f3_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/textual-dev-1.8.0-pyhd8ed1ab_0.conda
+        - conda: https://conda.anaconda.org/conda-forge/noarch/textual-plotext-1.0.1-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/textual-serve-1.1.3-pyhd8ed1ab_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhcf101f3_3.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.15.0-pyhcf101f3_0.conda
@@ -173,6 +175,7 @@ environments:
         - conda: https://conda.anaconda.org/conda-forge/noarch/mdurl-0.1.2-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-26.2-pyhc364b38_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.9.6-pyhcf101f3_0.conda
+        - conda: https://conda.anaconda.org/conda-forge/noarch/plotext-5.3.2-pyhff2d567_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyh29332c3_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.20.0-pyhd8ed1ab_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/pyopenssl-26.0.0-pyhcf101f3_0.conda
@@ -195,6 +198,7 @@ environments:
         - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-qthelp-2.0.0-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-serializinghtml-1.1.10-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/textual-8.2.6-pyhcf101f3_0.conda
+        - conda: https://conda.anaconda.org/conda-forge/noarch/textual-plotext-1.0.1-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.15.0-h396c80c_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.15.0-pyhcf101f3_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2025c-hc9c84f9_1.conda
@@ -256,6 +260,7 @@ environments:
         - conda: https://conda.anaconda.org/conda-forge/noarch/mdurl-0.1.2-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/packaging-26.2-pyhc364b38_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.9.6-pyhcf101f3_0.conda
+        - conda: https://conda.anaconda.org/conda-forge/noarch/plotext-5.3.2-pyhff2d567_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/pluggy-1.6.0-pyhf9edf01_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyh29332c3_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.20.0-pyhd8ed1ab_0.conda
@@ -268,6 +273,7 @@ environments:
         - conda: https://conda.anaconda.org/conda-forge/noarch/sniffio-1.3.1-pyhd8ed1ab_2.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/socksio-1.0.0-pyhd8ed1ab_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/textual-8.2.6-pyhcf101f3_0.conda
+        - conda: https://conda.anaconda.org/conda-forge/noarch/textual-plotext-1.0.1-pyhd8ed1ab_1.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.4.1-pyhcf101f3_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.15.0-h396c80c_0.conda
         - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.15.0-pyhcf101f3_0.conda
@@ -1493,6 +1499,17 @@ packages:
       - pkg:pypi/platformdirs?source=hash-mapping
     size: 25862
     timestamp: 1775741140609
+  - conda: https://conda.anaconda.org/conda-forge/noarch/plotext-5.3.2-pyhff2d567_0.conda
+    sha256: b3fd4a4526ce0bd0d24c287d54f56fa8caaa3f7190163421db031de07b422c9f
+    md5: 9e160af9c896f5dccd43815a226a26c8
+    depends:
+      - python >=3.9
+    license: MIT
+    license_family: MIT
+    purls:
+      - pkg:pypi/plotext?source=hash-mapping
+    size: 60077
+    timestamp: 1731942133024
   - conda: https://conda.anaconda.org/conda-forge/noarch/pluggy-1.6.0-pyhf9edf01_1.conda
     sha256: e14aafa63efa0528ca99ba568eaf506eb55a0371d12e6250aaaa61718d2eb62e
     md5: d7585b6550ad04c8c5e21097ada2888e
@@ -1925,6 +1942,19 @@ packages:
       - pkg:pypi/textual-dev?source=hash-mapping
     size: 29022
     timestamp: 1760339949063
+  - conda: https://conda.anaconda.org/conda-forge/noarch/textual-plotext-1.0.1-pyhd8ed1ab_1.conda
+    sha256: cba8986f82052923e1e857a2ce91712189f6d6564547dfb3771a7ae3d1f61ee9
+    md5: 96b4ba1d86092f546cbd217350ef3bb3
+    depends:
+      - plotext >=5.2.8,<6.0.0
+      - python >=3.9,<4.0.0
+      - textual >=0.86.2
+    license: MIT
+    license_family: MIT
+    purls:
+      - pkg:pypi/textual-plotext?source=hash-mapping
+    size: 20304
+    timestamp: 1735071100022
   - conda: https://conda.anaconda.org/conda-forge/noarch/textual-serve-1.1.3-pyhd8ed1ab_0.conda
     sha256: b2c7043969136f7e8564b19767414659862e71e9bab5eb9349c6722ad5080cd6
     md5: 21551070b70bd8a8099d705ac72823b0

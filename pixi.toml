@@ -14,6 +14,7 @@ h2 = ">=4.3.0,<5"
 socksio = ">=1.0.0,<2"
 textual = ">=8.2.4,<9"
 rich-click = ">=1.9.7,<2"
+textual-plotext = ">=1.0.1,<2"
 
 [pypi-dependencies]
 slurm-client = { path = ".", editable = true }

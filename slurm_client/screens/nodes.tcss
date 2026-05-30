@@ -1,0 +1,29 @@
+NodeDetails > Vertical {
+    content-align-horizontal: center;
+    margin: 0 2 0 2;
+}
+
+NodeDetails > Horizontal {
+    content-align-horizontal: center;
+    align-horizontal: center;
+    margin: 1 4 1 4;
+    height: 1;
+}
+
+ItemGrid#node-info {
+    border: round green;
+    height: 10;
+
+    grid-size: 2;
+    grid-columns: 1fr 10fr;
+}
+
+#live-usage {
+    border: round green;
+    height: 50%;
+    margin: 1 0 1 0;
+}
+
+#live-usage > .plot {
+    margin: 1 2 1 2;
+}
