@@ -108,7 +108,8 @@ class MainScreen(Screen):
         }
         request = requests[kind]
         r = await self.app.query_api(request)
-        msg = request.response_parser(r.json())
+        msg = TableContentFetched(kind, request.response_parser(r.json()))
+
         self.post_message(msg)
 
     @on(TableContentFetched)

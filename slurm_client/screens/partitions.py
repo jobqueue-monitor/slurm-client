@@ -140,7 +140,8 @@ class PartitionDetails(Screen):
 
         nodes = self.query_one("SortableTable#nodes")
         filtered_rows = [
-            [v for k, v in row.items() if k in node_columns] for row in msg.nodes
+            [getattr(node_details, col) for col in node_columns]
+            for node_details in msg.nodes
         ]
         nodes.replace_contents(filtered_rows)
 

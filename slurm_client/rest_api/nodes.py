@@ -13,7 +13,6 @@ from slurm_client.rest_api.resources import (
     parse_generic_resource_spec,
     parse_resource_spec,
 )
-from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.utils import identity
 
 node_group_re = re.compile(r"[-a-z0-9]+(?:\[[0-9]+(?:,[0-9]+)*\])?")
@@ -64,7 +63,7 @@ def nodes_summary(result: dict[str, Any]) -> list[NodeSummary]:
         for node in nodes
     ]
 
-    return TableContentFetched("nodes", rows)
+    return rows
 
 
 @dataclass
@@ -213,4 +212,6 @@ def node_details(
     if names is None:
         names = []
 
-    return [parse_node_details(node) for node in nodes if node["name"] in names]
+    return [
+        parse_node_details(node) for node in nodes if not names or node["name"] in names
+    ]

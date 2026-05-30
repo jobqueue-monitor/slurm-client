@@ -4,7 +4,7 @@ from typing import Any, TypedDict
 
 from textual.message import Message
 
-from slurm_client.rest_api.nodes import NodeSummary, parse_node_list
+from slurm_client.rest_api.nodes import NodeDetails, parse_node_list
 from slurm_client.rest_api.request import request
 from slurm_client.rest_api.resources import (
     ResourceDict,
@@ -14,7 +14,6 @@ from slurm_client.rest_api.resources import (
     parse_resources,
     split_value,
 )
-from slurm_client.rest_api.table_message import TableContentFetched
 
 
 @dataclass
@@ -29,7 +28,7 @@ class PartitionDetails(Message):
 
     states: list[str]
 
-    nodes: list[str] | list[NodeSummary]
+    nodes: list[str] | list[NodeDetails]
     tracked_resources: ResourcesDict
 
 
@@ -47,7 +46,7 @@ def all_partitions(result: dict[str, Any]) -> PartitionListMessage:
 
 
 @request.get("/slurm/{version}/partitions")
-def partitions_summary(result: dict[str, Any]) -> TableContentFetched:
+def partitions_summary(result: dict[str, Any]) -> list[PartitionSummary]:
     partitions = result.get("partitions", [])
 
     rows = [
@@ -60,7 +59,7 @@ def partitions_summary(result: dict[str, Any]) -> TableContentFetched:
         for partition in partitions
     ]
 
-    return TableContentFetched("partitions", rows)
+    return rows
 
 
 @request.get("/slurm/{version}/partition/{partition_name}")
