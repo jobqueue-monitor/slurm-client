@@ -1,5 +1,5 @@
 import re
-from typing import Any, NotRequired, TypedDict
+from typing import Any, TypedDict
 
 from slurm_client.utils import identity
 
@@ -50,7 +50,7 @@ class GenericResourcesDict(TypedDict):
     total: GenericResourceDict
     used: GenericResourceDict
 
-    drained: NotRequired[GenericResourceDict]
+    drained: GenericResourceDict | None
 
 
 def split_value(value: str | None) -> (int, str | None):
@@ -83,7 +83,10 @@ def parse_resources(total: str, used: str) -> ResourcesDict:
     }
 
 
-def extract_resource_group(match) -> dict[str, Any]:
+def extract_resource_group(resource: str) -> dict[str, Any]:
+    if (match := generic_resource_re.match(resource)) is None:
+        return {}
+
     translations = {"S": "socket_affinity", "IDX": "index"}
     converters = {"quantity": int}
 
@@ -110,6 +113,7 @@ def extract_resource_group(match) -> dict[str, Any]:
 
 
 def parse_generic_resource_spec(spec: str) -> list[GenericResourceDict]:
-    return [
-        extract_resource_group(match) for match in generic_resource_re.finditer(spec)
-    ]
+    if spec == "N/A":
+        return []
+
+    return [extract_resource_group(resource) for resource in spec.split(",")]
