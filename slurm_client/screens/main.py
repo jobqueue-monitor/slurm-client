@@ -4,7 +4,7 @@ from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.events import Click, ScreenResume, ScreenSuspend
+from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
 
@@ -16,6 +16,7 @@ from slurm_client.rest_api import (
 from slurm_client.rest_api.table_message import TableContentFetched
 from slurm_client.screens.partitions import PartitionDetails
 from slurm_client.widgets.footer import SlurmClientFooter
+from slurm_client.widgets.table import SortableTable
 
 
 @dataclass
@@ -46,38 +47,25 @@ class MainScreen(Screen):
                 yield Button("Filters", id="filters")
             with TabbedContent(id="tabs"):
                 with TabPane("Partitions", id="partitions", classes="tab"):
-                    yield DataTable(id="partitions")
+                    yield SortableTable(
+                        self.COLUMN_NAMES["partitions"], id="partitions"
+                    )
                 with TabPane("Jobs", id="jobs", classes="tab"):
-                    yield DataTable(id="jobs")
+                    yield SortableTable(self.COLUMN_NAMES["jobs"], id="jobs")
                 with TabPane("Nodes", id="nodes", classes="tab"):
-                    yield DataTable(id="nodes")
+                    yield SortableTable(self.COLUMN_NAMES["nodes"], id="nodes")
         yield SlurmClientFooter()
 
     async def on_mount(self) -> None:
-        self.sort_columns: dict[str, Sorting] = {}
-
-        partitions_table = self.query_one("DataTable#partitions")
-        for col in self.COLUMN_NAMES["partitions"]:
-            partitions_table.add_column(col, key=col)
-        self.sort_columns["partitions"] = Sorting(
-            self.COLUMN_NAMES["partitions"][0], reverse=False
-        )
+        partitions_table = self.query_one("SortableTable#partitions")
         partitions_table.cursor_type = "row"
         partitions_table.zebra_stripes = True
 
-        jobs_table = self.query_one("DataTable#jobs")
-        for col in self.COLUMN_NAMES["jobs"]:
-            jobs_table.add_column(col, key=col)
-        self.sort_columns["jobs"] = Sorting(self.COLUMN_NAMES["jobs"][0], reverse=False)
+        jobs_table = self.query_one("SortableTable#jobs")
         jobs_table.cursor_type = "row"
         jobs_table.zebra_stripes = True
 
-        nodes_table = self.query_one("DataTable#nodes")
-        for col in self.COLUMN_NAMES["nodes"]:
-            nodes_table.add_column(col, key=col)
-        self.sort_columns["nodes"] = Sorting(
-            self.COLUMN_NAMES["nodes"][0], reverse=False
-        )
+        nodes_table = self.query_one("SortableTable#nodes")
         nodes_table.cursor_type = "row"
         nodes_table.zebra_stripes = True
 
@@ -88,9 +76,7 @@ class MainScreen(Screen):
     @on(TabbedContent.TabActivated)
     def on_tab_activated(self, msg: TabbedContent.TabActivated) -> None:
         active = msg.pane.id
-        table = self.query_one(f"DataTable#{active}")
-        self.sort_column = self.COLUMN_NAMES[active][0]
-        table.sort(self.sort_column)
+        table = self.query_one(f"SortableTable#{active}")
         table.focus()
 
         self.run_worker(self._refresh_current_table())
@@ -127,29 +113,13 @@ class MainScreen(Screen):
 
     @on(TableContentFetched)
     def on_table_content_fetched(self, msg: TableContentFetched):
-        active_tab = msg.kind
-        table = self.query_one(f"DataTable#{msg.kind}")
-
-        focused = table.has_focus
-        pos = table.cursor_coordinate
-        scroll_y = table.scroll_y
-
-        table.clear()
-        for row in msg.rows():
-            table.add_row(*row)
-
-        sorting = self.sort_columns[active_tab]
-        table.sort(sorting.name, reverse=sorting.reverse)
-
-        table.cursor_coordinate = pos
-        table.scroll_y = scroll_y
-        if focused:
-            table.focus()
+        table = self.query_one(f"SortableTable#{msg.kind}")
+        table.replace_contents(msg.rows())
 
     async def on_data_table_row_selected(self, msg: DataTable.RowSelected) -> None:
         active_tab = self.current_tab()
-        active_table = self.query_one(f"DataTable#{active_tab}")
-        row = active_table.get_row_at(msg.cursor_row)
+        active_table = self.query_one(f"SortableTable#{active_tab}")
+        row = active_table.data_table.get_row_at(msg.cursor_row)
 
         name = row[0]
         match active_tab:
@@ -172,23 +142,3 @@ class MainScreen(Screen):
             if not name.startswith("main:"):
                 continue
             timer.resume()
-
-    @on(Click)
-    def on_click(self, event: Click) -> None:
-        active_tab = self.current_tab()
-
-        widget = event.widget
-        if not isinstance(widget, DataTable):
-            return
-
-        hover_column = self.COLUMN_NAMES[active_tab][widget.hover_column]
-
-        current_sorting = self.sort_columns[active_tab]
-        reverse = (
-            not current_sorting.reverse
-            if current_sorting.name == hover_column
-            else False
-        )
-
-        widget.sort(hover_column, reverse=reverse)
-        self.sort_columns[active_tab] = Sorting(name=hover_column, reverse=reverse)
