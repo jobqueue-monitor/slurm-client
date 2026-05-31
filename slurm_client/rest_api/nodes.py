@@ -213,13 +213,16 @@ class NodeDetails:
     generic_resources: GenericResourcesDict
 
     def render_summary(self) -> NodeSummary:
-        return {k: v for k, v in asdict(self).items() if k in self.summary_columns}
+        mapping = asdict(self)
+        return {k: mapping[k] for k in self.summary_columns}
 
     def render_info(self) -> NodeInfo:
-        return {k: v for k, v in asdict(self).items() if k in self.info_columns}
+        mapping = asdict(self)
+        return {k: mapping[k] for k in self.info_columns}
 
     def render_status(self) -> NodeStatus:
-        return {k: v for k, v in asdict(self).items() if k in self.status_columns}
+        mapping = asdict(self)
+        return {k: mapping[k] for k in self.status_columns}
 
     def resources(self) -> ResourcesDict:
         total = self.trackable_resources["total"]
