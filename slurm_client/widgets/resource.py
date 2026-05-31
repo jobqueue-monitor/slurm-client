@@ -143,7 +143,7 @@ def render_resources(
     used = resources["used"]
 
     return {
-        name: render_resource(total[name], used.get(name), units.get(name))
+        name: render_resource(total[name], used.get(name, 0), units.get(name))
         for name in total
         if name not in exclude
     }
