@@ -12,7 +12,6 @@ from slurm_client.rest_api.resources import (
     default_resources,
     parse_resource_spec,
     parse_resources,
-    split_value,
 )
 
 
@@ -136,27 +135,18 @@ def resource_usage(result: dict[str, Any], partition: str) -> ResourceDict:
         )
     ]
 
-    units = {
-        name: split_value(value)[1]
-        for name, value in default_resources.items()
-        if not value.isdigit()
-    }
-
     used_tres = [
         default_resources | parse_resource_spec(node["tres_used"]) for node in nodes
     ]
     column_wise_tres = defaultdict(lambda: 0)
     for tres in used_tres:
         for name, value in tres.items():
-            numeric_value, _ = split_value(value)
-            column_wise_tres[name] += numeric_value
+            column_wise_tres[name] += value
 
     used_gres = [parse_resource_spec(node["gres_used"]) for node in nodes]
     column_wise_gres = defaultdict(lambda: 0)
     for tres in used_gres:
         for name, value in tres.items():
-            numeric_value, _ = split_value(value)
-            column_wise_gres[name] += numeric_value
+            column_wise_gres[name] += value
 
-    combined = dict(column_wise_tres | column_wise_gres)
-    return {name: f"{value}{units.get(name, '')}" for name, value in combined.items()}
+    return dict(column_wise_tres | column_wise_gres)

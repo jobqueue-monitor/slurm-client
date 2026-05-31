@@ -117,21 +117,22 @@ class NodeSummary(TypedDict):
 
 class NodeInfo(TypedDict):
     address: str
-    hostname: str
-    state: list[str]
-
-    comment: str
-
-    boot_time: dt.datetime
-    last_busy: dt.datetime | None
-
-    operating_system: str
 
     architecture: str
     boards: int
     sockets: int
 
+    operating_system: str
     partitions: list[str]
+
+    comment: str
+
+
+class NodeStatus(TypedDict):
+    state: list[str]
+
+    boot_time: dt.datetime
+    last_busy: dt.datetime | None
 
 
 @dataclass
@@ -145,17 +146,18 @@ class NodeDetails:
     ]
     info_columns: ClassVar[list[str]] = [
         "address",
-        "hostname",
-        "state",
-        "reason",
-        "comment",
-        "boot_time",
-        "last_busy",
-        "operating_system",
         "architecture",
         "boards",
         "sockets",
+        "operating_system",
         "partitions",
+        "comment",
+    ]
+    status_columns: ClassVar[list[str]] = [
+        "state",
+        "reason",
+        "boot_time",
+        "last_busy",
     ]
 
     time: dt.datetime
@@ -194,6 +196,7 @@ class NodeDetails:
     threads: int
 
     real_memory: int
+    free_mem: int | None
 
     # -- system reservations
     specialized_cores: int
@@ -204,7 +207,6 @@ class NodeDetails:
     alloc_cpus: int
     alloc_memory: int
     alloc_idle_cpus: int
-    free_mem: int | None
 
     # -- combined resources
     trackable_resources: ResourcesDict
@@ -215,6 +217,17 @@ class NodeDetails:
 
     def render_info(self) -> NodeInfo:
         return {k: v for k, v in asdict(self).items() if k in self.info_columns}
+
+    def render_status(self) -> NodeStatus:
+        return {k: v for k, v in asdict(self).items() if k in self.status_columns}
+
+    def resources(self) -> ResourcesDict:
+        total = self.trackable_resources["total"]
+        used = self.trackable_resources["used"]
+        return {
+            name: (total[name], used.get(name, 0))
+            for name in self.trackable_resources["total"]
+        }
 
 
 def parse_node_details(time: dt.datetime, details: dict[str, Any]) -> NodeDetails:

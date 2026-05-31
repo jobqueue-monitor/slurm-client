@@ -4,6 +4,8 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Label, ProgressBar
 
+from slurm_client.rest_api.resources import ResourcesDict, as_unit
+
 
 def _color(percent: float) -> str:
     if percent < 50:
@@ -126,6 +128,25 @@ class ResourceWidget(Widget):
     def used(self, used: int):
         bar = self.query_one("#resource_bar")
         bar.used = used
+
+
+def render_resource(total: int, used: int, units: str) -> ResourceBar:
+    return ResourceBar(
+        used=as_unit(used, units), total=as_unit(total, units), units=units
+    )
+
+
+def render_resources(
+    resources: ResourcesDict, units: dict[str, str], exclude: set[str]
+) -> dict[str, ResourceBar]:
+    total = resources["total"]
+    used = resources["used"]
+
+    return {
+        name: render_resource(total[name], used.get(name), units.get(name))
+        for name in total
+        if name not in exclude
+    }
 
 
 from textual.app import App

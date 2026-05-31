@@ -8,39 +8,13 @@ from textual.widgets import Header, Label, ListItem, ListView, Static
 from slurm_client.rest_api.nodes import all_nodes
 from slurm_client.rest_api.partitions import (
     PartitionDetails,
-    ResourcesDict,
     partition_details,
     resource_usage,
 )
-from slurm_client.rest_api.resources import split_value
 from slurm_client.screens.error import ErrorScreen, NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
-from slurm_client.widgets.resource import ResourceBar
+from slurm_client.widgets.resource import render_resources
 from slurm_client.widgets.table import SortableTable
-
-
-def _render_resource(name: str, total: str, used: str | None) -> ResourceBar:
-    total_value, total_units = split_value(total)
-    used_value, used_units = split_value(used)
-
-    if total_units != used_units and used not in ("", None):
-        raise ValueError(f"mismatching units ({total_units} != {used_units}")
-
-    return ResourceBar(used=used_value, total=total_value, units=total_units)
-
-
-def _render_resources(
-    resources: ResourcesDict, exclude: set[str]
-) -> dict[str, ResourceBar]:
-    total = resources["total"]
-    used = resources["used"]
-
-    return {
-        name: _render_resource(name, total[name], used.get(name))
-        for name in total
-        if name not in exclude
-    }
-
 
 node_columns = ["name", "address", "state"]
 
@@ -129,8 +103,8 @@ class PartitionDetails(Screen):
         states.extend([ListItem(Label(state.lower())) for state in msg.states])
 
         if self.resource_widgets is None:
-            self.resource_widgets = _render_resources(
-                msg.tracked_resources, exclude={"billing"}
+            self.resource_widgets = render_resources(
+                msg.tracked_resources, exclude={"billing"}, units={"memory": "M"}
             )
             resources = self.query_one("#tres")
             for name, widget in self.resource_widgets.items():

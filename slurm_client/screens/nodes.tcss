@@ -12,18 +12,37 @@ NodeDetails > Horizontal {
 
 ItemGrid#node-info {
     border: round green;
-    height: 10;
 
     grid-size: 2;
     grid-columns: 1fr 10fr;
 }
 
-#live-usage {
+ItemGrid#node-status {
     border: round green;
-    height: 50%;
-    margin: 1 0 1 0;
+    grid-size: 2;
+    grid-columns: 1fr 10fr;
 }
 
-#live-usage > .plot {
+ItemGrid#resources {
+    border: round green;
+    grid-size: 2;
+    grid-columns: 1fr 10fr;
+}
+
+.details {
+    height: auto;
+    width: 100%;
+
+    layout: vertical;
+}
+
+#live-usage {
+    border: round purple;
+    margin: 1 0 1 0;
+
+    height: 40%;
+}
+
+.live-usage > .plot {
     margin: 1 2 1 2;
 }

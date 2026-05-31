@@ -4,7 +4,7 @@ from typing import Any, TypedDict
 from slurm_client.utils import identity
 
 value_re = re.compile(r"(?P<value>[0-9]+)(?P<units>[a-zA-Z]+)?")
-resource_re = re.compile(r"(?P<key>[-a-z0-9_:/]+)=(?P<value>[0-9M]+)")
+resource_re = re.compile(r"(?P<key>[-a-z0-9_:/]+)=(?P<value>[0-9A-Z]+)")
 generic_resource_re = re.compile(
     r"""
     (?P<type>[a-z]+)
@@ -33,10 +33,10 @@ class GenericResourceDict(TypedDict):
 
 
 default_resources: ResourceDict = {
-    "cpu": "0",
-    "memory": "0M",
-    "node": "0",
-    "billing": "0",
+    "cpu": 0,
+    "memory": 0,
+    "node": 0,
+    "billing": 0,
 }
 translations = {"mem": "memory"}
 
@@ -54,7 +54,7 @@ class GenericResourcesDict(TypedDict):
 
 
 def split_value(value: str | None) -> (int, str | None):
-    if value is None:
+    if value in ("", None):
         return 0, None
 
     match = value_re.fullmatch(value)
@@ -67,11 +67,32 @@ def split_value(value: str | None) -> (int, str | None):
     return numeric_value, units
 
 
+factors = {"K": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
+
+
+def decode_unit(value: str | None) -> int:
+    numeric_value, unit = split_value(value)
+    if unit is None:
+        return numeric_value
+
+    return numeric_value * factors[unit]
+
+
+def as_unit(value: int, unit: str | None) -> int | float:
+    if unit is None:
+        return value
+
+    factor = factors.get(unit, 1)
+    return float(value) / factor
+
+
 def parse_resource_spec(spec: str) -> ResourceDict:
     decoded = {
         match.group("key"): match.group("value") for match in resource_re.finditer(spec)
     }
-    translated = {translations.get(key, key): value for key, value in decoded.items()}
+    translated = {
+        translations.get(key, key): decode_unit(value) for key, value in decoded.items()
+    }
 
     return translated
 
