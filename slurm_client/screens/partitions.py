@@ -12,6 +12,7 @@ from slurm_client.rest_api.partitions import (
     resource_usage,
 )
 from slurm_client.screens.error import ErrorScreen, NetworkError
+from slurm_client.screens.nodes import NodeDetails
 from slurm_client.widgets.footer import SlurmClientFooter
 from slurm_client.widgets.resource import render_resources
 from slurm_client.widgets.table import SortableTable
@@ -125,6 +126,16 @@ class PartitionDetails(Screen):
 
     async def action_refresh(self) -> None:
         await self.fetch_partition_details()
+
+    async def on_data_table_row_selected(self, msg: SortableTable.RowSelected) -> None:
+        table = msg.data_table
+        if not isinstance(table, SortableTable) or table.id != "nodes":
+            return
+
+        row = table.get_row_at(msg.cursor_row)
+
+        name = row[0]
+        self.app.push_screen(NodeDetails(name))
 
     @on(NetworkError)
     async def on_network_error(self, msg: NetworkError) -> None:
