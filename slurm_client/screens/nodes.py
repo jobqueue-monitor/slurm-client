@@ -151,7 +151,7 @@ class NodeDetails(Screen):
         if len(self.time) >= self.max_data_points:
             self.time.pop(0)
             self.cpu_load.pop(0)
-            self.free_mem.pop(0)
+            self.used_memory.pop(0)
 
         self.time.append(time)
         self.cpu_load.append(cpu_load)
@@ -212,20 +212,28 @@ class NodeDetails(Screen):
             resources.mount(key_label)
             resources.mount(value_bar)
 
-        self.push_data(details.time, details.cpu_load, details.free_mem)
-        if len(self.time) >= 2:
-            time = [t.strftime(date_format) for t in self.time]
+        self.push_data(
+            details.time, details.cpu_load, details.real_memory - details.free_mem
+        )
+        time = [t.strftime(date_format) for t in self.time]
 
-            cpu = self.query_one("PlotextPlot#live-cpu")
-            cpu.plt.clear_data()
-            cpu.plt.date_form(date_pattern)
-            cpu.plt.plot(time, self.cpu_load, color="blue", marker="braille")
-            cpu.plt.ylim(lower=0.0)
-            cpu.refresh()
+        right = self.time[-1]
+        left = right - self.max_data_points * dt.timedelta(
+            seconds=self.app.config.ping_interval
+        )
 
-            mem = self.query_one("PlotextPlot#live-mem")
-            mem.plt.clear_data()
-            mem.plt.date_form(date_pattern)
-            mem.plt.plot(time, self.used_memory, color="orange", marker="braille")
-            mem.plt.ylim(lower=0.0)
-            mem.refresh()
+        cpu = self.query_one("PlotextPlot#live-cpu")
+        cpu.plt.clear_data()
+        cpu.plt.date_form(date_pattern)
+        cpu.plt.plot(time, self.cpu_load, color="blue", marker="braille")
+        cpu.plt.xlim(left.strftime(date_format), right.strftime(date_format))
+        cpu.plt.ylim(lower=0.0)
+        cpu.refresh()
+
+        mem = self.query_one("PlotextPlot#live-mem")
+        mem.plt.clear_data()
+        mem.plt.date_form(date_pattern)
+        mem.plt.plot(time, self.used_memory, color="orange", marker="braille")
+        mem.plt.xlim(left.strftime(date_format), right.strftime(date_format))
+        mem.plt.ylim(lower=0.0)
+        mem.refresh()
