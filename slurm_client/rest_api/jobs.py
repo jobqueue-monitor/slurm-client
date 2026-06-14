@@ -1,6 +1,6 @@
 import datetime as dt
-from dataclasses import asdict, dataclass
-from typing import Any, ClassVar, TypedDict
+from dataclasses import dataclass
+from typing import Any, TypedDict
 
 from slurm_client.rest_api.parsers import parse_datetime
 from slurm_client.rest_api.request import request
@@ -210,15 +210,6 @@ class JobScheduling:
 
 @dataclass
 class Job:
-    summary_columns: ClassVar[list[str]] = [
-        "name",
-        "user",
-        "group",
-        "partition",
-        "start_time",
-        "state",
-    ]
-
     time: dt.datetime
 
     submission: JobSubmission
@@ -230,7 +221,22 @@ class Job:
     extra: str
 
     def render_summary(self) -> JobSummary:
-        return {k: v for k, v in asdict(self).items() if k in self.summary_columns}
+        state = self.status.state[0]
+        match state:
+            case "RUNNING":
+                time = self.status.start_time
+            case "PENDING":
+                time = self.submission.submit_time
+            case _:
+                time = self.status.start_time
+
+        return {
+            "name": self.info.name,
+            "user": self.submission.user,
+            "group": self.submission.group,
+            "partition": self.info.partition,
+            "time": time,
+        }
 
 
 @request.get("/slurm/{version}/jobs")
