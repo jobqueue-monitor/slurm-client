@@ -1,10 +1,13 @@
 import datetime as dt
 from dataclasses import dataclass
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
-from slurm_client.rest_api.parsers import parse_datetime
+from slurm_client.rest_api.parsers import parse_datetime, parse_value_set
 from slurm_client.rest_api.request import request
 from slurm_client.rest_api.resources import ResourceDict
+
+if TYPE_CHECKING:
+    from slurm_client.types import JSON
 
 
 class JobSummary(TypedDict):
@@ -12,7 +15,7 @@ class JobSummary(TypedDict):
     user: str
     group: str
     partition: str
-    start_time: dt.datetime
+    time: dt.datetime
     state: list[str]
 
 
@@ -27,6 +30,14 @@ class ExitCode:
     status: list[str]
     return_code: int
     signal: Signal
+
+
+def parse_exit_code(x: dict[str, JSON]) -> ExitCode:
+    return ExitCode(
+        status=x["status"],
+        return_code=parse_value_set(x["return_code"]),
+        signal=Signal(id=parse_value_set(x["signal"]["id"]), name=x["signal"]["name"]),
+    )
 
 
 @dataclass
@@ -225,8 +236,10 @@ class Job:
         match state:
             case "RUNNING":
                 time = self.status.start_time
-            case "PENDING":
+            case "PENDING" | "TIMEOUT":
                 time = self.submission.submit_time
+            case "COMPLETED":
+                time = self.submission.end_time
             case _:
                 time = self.status.start_time
 
@@ -236,23 +249,100 @@ class Job:
             "group": self.submission.group,
             "partition": self.info.partition,
             "time": time,
+            "state": state,
         }
 
 
-@request.get("/slurm/{version}/jobs")
-def all_jobs(result: dict[str, Any]) -> list[Job]:
-    jobs = result.get("jobs", [])
+def _extract_submission(data: dict[str, JSON]) -> JobSubmission:
+    return JobSubmission(
+        user=data["user_name"],
+        group=data["group_name"],
+        user_id=data["user_id"],
+        group_id=data["group_id"],
+        submit_line=data["submit_line"],
+        submit_time=parse_datetime(data["submit_time"]),
+        mail_type=data["mail_type"],
+        mail_user=data["mail_user"],
+        allocating_node=data["allocating_node"],
+    )
 
-    rows = [
-        Job(
-            name=job["name"],
-            user=job["user_name"],
-            group=job["group_name"],
-            partition=job["partition"],
-            start_time=parse_datetime(job["start_time"]),
-            state=job["job_state"],
-        )
-        for job in jobs
-    ]
+
+def _extract_info(data: dict[str, JSON]) -> JobDetails:
+    return JobDetails(
+        id=data["job_id"],
+        name=data["name"],
+        partition=data["partition"],
+        command=data["command"],
+        dependency=data["dependency"],
+        nice=data["nice"],
+        current_working_directory=data["current_working_directory"],
+        container=data["container"],
+        container_id=data["container_id"],
+        container_type=data.get("container_type"),
+        selinux_context=data["selinux_context"],
+        restart_count=data["restart_cnt"],
+        features=data["features"],
+        batch_job=data.get("batch_job"),
+        batch_host=data["batch_host"],
+        batch_features=data["batch_features"],
+        system_comment=data["system_comment"],
+        array_job_id=parse_value_set(data["array_job_id"]),
+        array_task_id=parse_value_set(data["array_task_id"]),
+        array_max_tasks=parse_value_set(data["array_max_tasks"]),
+        array_task=data["array_task_string"],
+    )
+
+
+def _extract_status(data: dict[str, JSON]) -> JobStatus:
+    return JobStatus(
+        state=data["job_state"],
+        hold=data["hold"],
+        flags=data["flags"],
+        derived_exit_code=parse_exit_code(data["derived_exit_code"]),
+        exit_code=parse_exit_code(data["exit_code"]),
+        failed_node=data["failed_node"],
+        start_time=parse_datetime(data["start_time"]),
+        suspend_time=parse_datetime(data["suspend_time"]),
+        resize_time=parse_datetime(data["resize_time"]),
+        eligible_time=parse_datetime(data["eligible_time"]),
+        end_time=parse_datetime(data["end_time"]),
+        preempt_time=parse_datetime(data["preempt_time"]),
+        preemtable_time=parse_datetime(data.get("preemtable_time", {"set": False})),
+        pre_sus_time=parse_datetime(data["pre_sus_time"]),
+        standard_input=data["standard_input"],
+        standard_output=data["standard_output"],
+        standard_error=data["standard_error"],
+        stdin_expanded=data["stdin_expanded"],
+        stdout_expanded=data["stdout_expanded"],
+        stderr_expanded=data["stderr_expanded"],
+    )
+
+
+def _extract_resources(data: dict[str, JSON]) -> JobResources:
+    pass
+
+
+def _extract_scheduling(data: dict[str, JSON]) -> JobScheduling:
+    pass
+
+
+def _parse_job(time: dt.datetime, data: dict[str, JSON]) -> Job:
+    return Job(
+        time=time,
+        submission=_extract_submission(data),
+        info=_extract_info(data),
+        resources=_extract_resources(data),
+        status=_extract_status(data),
+        scheduling=_extract_scheduling(data),
+        extra=data["extra"],
+    )
+
+
+@request.get("/slurm/{version}/jobs")
+def all_jobs(result: dict[str, JSON]) -> list[Job]:
+    jobs = result.get("jobs", [])
+    time = parse_datetime(result["last_update"])
+
+    rows = [_parse_job(time, job) for job in jobs]
 
     return rows
