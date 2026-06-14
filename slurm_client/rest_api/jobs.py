@@ -30,6 +30,52 @@ class ExitCode:
 
 
 @dataclass
+class JobSubmission:
+    user: str
+    user_id: int
+    group: str
+    group_id: int
+
+    submit_line: str
+    submit_time: dt.datetime
+
+    mail_type: list[str]
+    mail_user: str
+
+    allocating_node: str
+
+
+@dataclass
+class JobDetails:
+    id: int
+    name: str
+    partition: str
+    command: str
+    dependency: str
+    nice: int
+
+    current_working_directory: str
+    container: str | None
+    container_id: str | None
+    container_type: str | None
+    selinux_context: str
+
+    restart_count: int
+    features: list[str]  # remove?
+
+    batch_job: bool
+    batch_host: str
+    batch_features: str  # remove?
+
+    system_comment: str
+
+    array_job_id: int | None
+    array_task_id: int | None
+    array_max_tasks: int | None
+    array_task: str
+
+
+@dataclass
 class JobResource:
     allocated: int
     used: int
@@ -68,7 +114,7 @@ class JobNodes:
 
 
 @dataclass
-class JobResources:
+class JobResourceDetails:
     select_type: list[str]
     cpus: int
     threads_per_core: int | None
@@ -77,54 +123,11 @@ class JobResources:
 
 
 @dataclass
-class Job:
-    summary_columns: ClassVar[list[str]] = [
-        "name",
-        "user",
-        "group",
-        "partition",
-        "start_time",
-        "state",
-    ]
-
-    time: dt.datetime
-
-    # request submission
-    user: str
-    user_id: int
-    group: str
-    group_id: int
-
-    submit_line: str
-    submit_time: dt.datetime
-
-    allocating_node: str
-
-    # job info
-    id: int
-    name: str
-    partition: str
-    command: str
-    dependency: str
-    nice: int
-
-    current_working_directory: str
-
-    restart_count: int
-    features: list[str]  # remove?
-
-    batch_job: bool
-    batch_host: str
-    batch_features: str  # remove?
-
-    system_comment: str
-
-    # resources
+class JobResources:
     allocated_nodes: list[str]
     network: str
 
-    gres_detail: list[str]
-    job_resources: JobResources
+    resource_details: JobResourceDetails
 
     max_cpus: int
     max_nodes: int
@@ -150,6 +153,8 @@ class Job:
     thread_spec: int
     cores_per_socket: int
 
+    gres_detail: list[str]
+
     tres_bind: ResourceDict  # remove?
     tres_freq: ResourceDict  # remove?
 
@@ -161,7 +166,9 @@ class Job:
     tres_requested: ResourceDict
     tres_allocated: ResourceDict
 
-    # status
+
+@dataclass
+class JobStatus:
     state: list[str]
 
     hold: bool
@@ -187,7 +194,9 @@ class Job:
     stdout_expanded: str
     stderr_expanded: str
 
-    # scheduling
+
+@dataclass
+class JobScheduling:
     cron: str
     contiguous: bool
     deadline: str
@@ -198,23 +207,26 @@ class Job:
     time_minimum: int
     requeue: bool
 
-    # environment
-    container: str | None
-    container_id: str | None
-    container_type: str | None
-    selinux_context: str
 
-    # job array
-    array_job_id: int | None
-    array_task_id: int | None
-    array_max_tasks: int | None
-    array_task: str
+@dataclass
+class Job:
+    summary_columns: ClassVar[list[str]] = [
+        "name",
+        "user",
+        "group",
+        "partition",
+        "start_time",
+        "state",
+    ]
 
-    # settings
-    mail_type: list[str]
-    mail_user: str
+    time: dt.datetime
 
-    # unsorted
+    submission: JobSubmission
+    info: JobDetails
+    resources: JobResources
+    status: JobStatus
+    scheduling: JobScheduling
+
     extra: str
 
     def render_summary(self) -> JobSummary:
