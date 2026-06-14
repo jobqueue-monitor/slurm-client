@@ -297,6 +297,7 @@ class Job:
             "partition": self.info.partition,
             "time": time,
             "state": state,
+            "reason": self.status.reason,
         }
 
 
@@ -343,7 +344,7 @@ def _extract_info(data: dict[str, JSON]) -> JobDetails:
 def _extract_status(data: dict[str, JSON]) -> JobStatus:
     return JobStatus(
         state=data["job_state"],
-        reason=data["state_reason"],
+        reason=data["state_reason"] if data["state_reason"] != "None" else None,
         description=data["state_description"],
         hold=data["hold"],
         flags=data["flags"],

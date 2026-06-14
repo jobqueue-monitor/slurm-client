@@ -29,7 +29,7 @@ class MainScreen(Screen):
 
     COLUMN_NAMES = {
         "partitions": ["name", "total_nodes", "total_cpus", "state"],
-        "jobs": ["name", "user", "group", "partition", "time", "state"],
+        "jobs": ["name", "user", "group", "partition", "time", "state", "reason"],
         "nodes": ["name", "address", "hostname", "state", "partitions"],
     }
 
