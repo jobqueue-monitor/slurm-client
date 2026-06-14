@@ -4,6 +4,7 @@ from typing import Any, ClassVar, TypedDict
 
 from slurm_client.rest_api.parsers import parse_datetime
 from slurm_client.rest_api.request import request
+from slurm_client.rest_api.resources import ResourceDict
 
 
 class JobSummary(TypedDict):
@@ -29,8 +30,50 @@ class ExitCode:
 
 
 @dataclass
+class JobResource:
+    allocated: int
+    used: int
+
+
+@dataclass
+class JobResourceCore:
+    index: int
+    status: list[str]
+
+
+@dataclass
+class JobSocket:
+    index: int
+    cores: list[JobResourceCore]
+
+
+@dataclass
+class JobNode:
+    index: int
+    name: str
+
+    cpus: JobResource
+    memory: JobResource
+
+    sockets: list[JobSocket]
+
+
+@dataclass
+class JobNodes:
+    select_type: list[str]
+    allocated_nodes: list[str]
+    whole: bool
+
+    allocation: list[JobNode]
+
+
+@dataclass
 class JobResources:
-    pass
+    select_type: list[str]
+    cpus: int
+    threads_per_core: int | None
+
+    nodes: JobNodes
 
 
 @dataclass
@@ -46,55 +89,42 @@ class Job:
 
     time: dt.datetime
 
-    name: str
+    # request submission
     user: str
-    group: str
-
     user_id: int
+    group: str
     group_id: int
 
+    submit_line: str
+    submit_time: dt.datetime
+
     allocating_node: str
-    batch_host: str
-    batch_features: str
+
+    # job info
+    id: int
+    name: str
     partition: str
-
-    flags: list[str]
-
     command: str
-
-    container: str | None
-    container_id: str | None
-    container_type: str | None
-
-    contiguous: bool
-
-    core_spec: int
-    thread_spec: int
-    cores_per_socket: int
-
-    cron: str
-    deadline: str
     dependency: str
+    nice: int
 
-    derived_exit_code: ExitCode
+    current_working_directory: str
 
-    start_time: dt.datetime
-    eligible_time: dt.datetime
-    end_time: dt.datetime
+    restart_count: int
+    features: list[str]  # remove?
 
-    excluded_nodes: list[str]
-    exit_code: ExitCode
-    failed_node: str
+    batch_job: bool
+    batch_host: str
+    batch_features: str  # remove?
 
-    extra: str
-    features: list[str]
+    system_comment: str
+
+    # resources
+    allocated_nodes: list[str]
+    network: str
 
     gres_detail: list[str]
-    job_id: int
     job_resources: JobResources
-
-    mail_type: list[str]
-    mail_user: str
 
     max_cpus: int
     max_nodes: int
@@ -103,37 +133,51 @@ class Job:
     memory_update_delay: int
     memory_update_margin: int
 
-    netowrk: str
-    nodes: str
-    nice: int
-
     cpus: int
     node_count: int
+    reboot: bool
 
     memory_per_cpu: int
     memory_per_node: int
 
-    minimum_cpus_per_node: int
-    minimum_tmp_disk_per_node: int
-
-    preempt_time: dt.datetime
-    preemtable_time: dt.datetime
-
-    pre_sus_time: dt.datetime
-
-    hold: bool
-
-    reboot: bool
-    requeue: bool
-    required_nodes: list[str]
-
-    resize_time: dt.datetime
-    restart_count: int
-    scheduled_nodes: list[str]
-    selinux_context: str
-
+    threads_per_core: int
     sockets_per_board: int
     sockets_per_node: int
+
+    minimum_cpus_per_node: int
+    minimum_tmp_disk_per_node: int
+    core_spec: int
+    thread_spec: int
+    cores_per_socket: int
+
+    tres_bind: ResourceDict  # remove?
+    tres_freq: ResourceDict  # remove?
+
+    tres_per_job: ResourceDict
+    tres_per_node: ResourceDict
+    tres_per_socket: ResourceDict
+    tres_per_task: ResourceDict
+
+    tres_requested: ResourceDict
+    tres_allocated: ResourceDict
+
+    # status
+    state: list[str]
+
+    hold: bool
+    flags: list[str]
+    derived_exit_code: ExitCode
+    exit_code: ExitCode
+    failed_node: str
+
+    start_time: dt.datetime
+    suspend_time: dt.datetime
+    resize_time: dt.datetime
+    eligible_time: dt.datetime
+    end_time: dt.datetime
+    preempt_time: dt.datetime
+    preemtable_time: dt.datetime
+    pre_sus_time: dt.datetime
 
     standard_input: str
     standard_output: str
@@ -143,27 +187,35 @@ class Job:
     stdout_expanded: str
     stderr_expanded: str
 
-    submit_line: str
-    suspend_time: dt.datetime
-
-    system_comment: str
-    state: list[str]
-
+    # scheduling
+    cron: str
+    contiguous: bool
+    deadline: str
+    excluded_nodes: list[str]
+    required_nodes: list[str]
+    scheduled_nodes: list[str]  # resources?
     time_limit: int
     time_minimum: int
+    requeue: bool
 
-    threads_per_core: int
+    # environment
+    container: str | None
+    container_id: str | None
+    container_type: str | None
+    selinux_context: str
 
-    tres_bind: str
-    tres_freq: str
-    tres_per_job: str
-    tres_per_node: str
-    tres_per_socket: str
-    tres_per_task: str
-    tres_req_str: str
-    tres_alloc_str: str
+    # job array
+    array_job_id: int | None
+    array_task_id: int | None
+    array_max_tasks: int | None
+    array_task: str
 
-    current_working_directory: str
+    # settings
+    mail_type: list[str]
+    mail_user: str
+
+    # unsorted
+    extra: str
 
     def render_summary(self) -> JobSummary:
         return {k: v for k, v in asdict(self).items() if k in self.summary_columns}
