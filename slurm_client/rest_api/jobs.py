@@ -2,11 +2,14 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
+from slurm_client.rest_api.nodes import parse_node_list
 from slurm_client.rest_api.parsers import parse_datetime, parse_value_set
 from slurm_client.rest_api.request import request
-from slurm_client.rest_api.resources import ResourceDict
+from slurm_client.rest_api.resources import ResourceDict, parse_resource_spec
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from slurm_client.types import JSON
 
 
@@ -91,6 +94,16 @@ class JobResource:
     allocated: int
     used: int
 
+    @classmethod
+    def from_dict(cls, mapping: dict[str, int]) -> Self:
+        match mapping:
+            case {"count": allocated, "used": used}:
+                return cls(allocated=allocated, used=used)
+            case {"allocated": allocated, "used": used}:
+                return cls(allocated=allocated, used=mapping["used"])
+
+        raise ValueError(f"invalid job resources: {mapping}")
+
 
 @dataclass
 class JobResourceCore:
@@ -102,6 +115,13 @@ class JobResourceCore:
 class JobSocket:
     index: int
     cores: list[JobResourceCore]
+
+    @classmethod
+    def from_dict(cls, mapping: dict[str, JSON]) -> Self:
+        return cls(
+            index=mapping["index"],
+            cores=[JobResourceCore(**core) for core in mapping["cores"]],
+        )
 
 
 @dataclass
@@ -124,6 +144,25 @@ class JobNodes:
     allocation: list[JobNode]
 
 
+def _parse_allocation(data: dict[str, JSON]) -> JobNode:
+    return JobNode(
+        index=data["index"],
+        name=data["name"],
+        cpus=JobResource.from_dict(data["cpus"]),
+        memory=JobResource.from_dict(data["memory"]),
+        sockets=[JobSocket.from_dict(socket) for socket in data["sockets"]],
+    )
+
+
+def _parse_nodes(data: dict[str, JSON]) -> JobNodes:
+    return JobNodes(
+        select_type=data["select_type"],
+        allocated_nodes=parse_node_list(data["list"]),
+        whole=data["whole"],
+        allocation=[_parse_allocation(alloc) for alloc in data["allocation"]],
+    )
+
+
 @dataclass
 class JobResourceDetails:
     select_type: list[str]
@@ -131,6 +170,18 @@ class JobResourceDetails:
     threads_per_core: int | None
 
     nodes: JobNodes
+
+
+def _parse_resource_details(data: dict[str, JSON] | None) -> JobResourceDetails | None:
+    if data is None:
+        return None
+
+    return JobResourceDetails(
+        select_type=data["select_type"],
+        cpus=data["cpus"],
+        threads_per_core=parse_value_set(data["threads_per_core"]),
+        nodes=_parse_nodes(data["nodes"]),
+    )
 
 
 @dataclass
@@ -144,8 +195,6 @@ class JobResources:
     max_nodes: int
 
     memory_per_tres: str
-    memory_update_delay: int
-    memory_update_margin: int
 
     cpus: int
     node_count: int
@@ -166,12 +215,8 @@ class JobResources:
 
     gres_detail: list[str]
 
-    tres_bind: ResourceDict  # remove?
-    tres_freq: ResourceDict  # remove?
-
     tres_per_job: ResourceDict
     tres_per_node: ResourceDict
-    tres_per_socket: ResourceDict
     tres_per_task: ResourceDict
 
     tres_requested: ResourceDict
@@ -181,6 +226,8 @@ class JobResources:
 @dataclass
 class JobStatus:
     state: list[str]
+    reason: str
+    description: str
 
     hold: bool
     flags: list[str]
@@ -236,10 +283,10 @@ class Job:
         match state:
             case "RUNNING":
                 time = self.status.start_time
-            case "PENDING" | "TIMEOUT":
+            case "PENDING":
                 time = self.submission.submit_time
-            case "COMPLETED":
-                time = self.submission.end_time
+            case "COMPLETED" | "TIMEOUT":
+                time = self.status.end_time
             case _:
                 time = self.status.start_time
 
@@ -296,6 +343,8 @@ def _extract_info(data: dict[str, JSON]) -> JobDetails:
 def _extract_status(data: dict[str, JSON]) -> JobStatus:
     return JobStatus(
         state=data["job_state"],
+        reason=data["state_reason"],
+        description=data["state_description"],
         hold=data["hold"],
         flags=data["flags"],
         derived_exit_code=parse_exit_code(data["derived_exit_code"]),
@@ -319,11 +368,47 @@ def _extract_status(data: dict[str, JSON]) -> JobStatus:
 
 
 def _extract_resources(data: dict[str, JSON]) -> JobResources:
-    pass
+    return JobResources(
+        allocated_nodes=parse_node_list(data["nodes"]),
+        network=data["network"],
+        resource_details=_parse_resource_details(data["job_resources"]),
+        max_cpus=parse_value_set(data["max_cpus"]),
+        max_nodes=parse_value_set(data["max_nodes"]),
+        memory_per_tres=data["memory_per_tres"],
+        cpus=parse_value_set(data["cpus"]),
+        node_count=parse_value_set(data["node_count"]),
+        reboot=data["reboot"],
+        memory_per_cpu=parse_value_set(data["memory_per_cpu"]),
+        memory_per_node=parse_value_set(data["memory_per_node"]),
+        threads_per_core=parse_value_set(data["threads_per_core"]),
+        sockets_per_board=data["sockets_per_board"],
+        sockets_per_node=parse_value_set(data["sockets_per_node"]),
+        minimum_cpus_per_node=parse_value_set(data["minimum_cpus_per_node"]),
+        minimum_tmp_disk_per_node=parse_value_set(data["minimum_tmp_disk_per_node"]),
+        core_spec=data["core_spec"],
+        thread_spec=data["thread_spec"],
+        cores_per_socket=parse_value_set(data["cores_per_socket"]),
+        gres_detail=data["gres_detail"],
+        tres_per_job=parse_resource_spec(data["tres_per_job"]),
+        tres_per_node=parse_resource_spec(data["tres_per_node"]),
+        tres_per_task=parse_resource_spec(data["tres_per_task"]),
+        tres_requested=parse_resource_spec(data["tres_req_str"]),
+        tres_allocated=parse_resource_spec(data["tres_alloc_str"]),
+    )
 
 
 def _extract_scheduling(data: dict[str, JSON]) -> JobScheduling:
-    pass
+    return JobScheduling(
+        cron=data["cron"],
+        contiguous=data["contiguous"],
+        deadline=data["deadline"],
+        excluded_nodes=data["excluded_nodes"],
+        required_nodes=data["required_nodes"],
+        scheduled_nodes=data["scheduled_nodes"],
+        time_limit=parse_value_set(data["time_limit"]),
+        time_minimum=parse_value_set(data["time_minimum"]),
+        requeue=data["requeue"],
+    )
 
 
 def _parse_job(time: dt.datetime, data: dict[str, JSON]) -> Job:

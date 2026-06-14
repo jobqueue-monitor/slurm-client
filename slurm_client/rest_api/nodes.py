@@ -29,11 +29,16 @@ def _expand_glob(glob: str) -> list[str]:
     return [f"{prefix}{value}" for value in variations.split(",")]
 
 
-def parse_node_list(nodes: dict[str, Any]) -> list[str]:
-    if nodes["total"] == 0:
-        return []
+def parse_node_list(nodes: str | dict[str, Any]) -> list[str]:
+    if isinstance(nodes, str):
+        size = nodes.count(",") + 1 if nodes else 0
+        configured = nodes
+    else:
+        size = nodes["total"]
+        configured = nodes["configured"]
 
-    configured = nodes["configured"]
+    if size == 0:
+        return []
 
     globs = node_group_re.findall(configured)
     return list(itertools.chain.from_iterable(_expand_glob(glob) for glob in globs))
