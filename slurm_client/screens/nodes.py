@@ -122,14 +122,14 @@ class NodeDetails(Screen):
     @on(ScreenSuspend)
     def on_screen_suspend(self) -> None:
         for name, timer in self.app.timers.items():
-            if not name.startswith("main:"):
+            if not name.startswith("node:"):
                 continue
             timer.pause()
 
     @on(ScreenResume)
     def on_screen_resume(self, event: ScreenResume) -> None:
         for name, timer in self.app.timers.items():
-            if not name.startswith("main:"):
+            if not name.startswith("node:"):
                 continue
             timer.resume()
 
