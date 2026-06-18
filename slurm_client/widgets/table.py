@@ -25,11 +25,15 @@ class SortableTable(DataTable):
         for row in new_rows:
             row_name = str(row[0])
             try:
-                self.get_row(row_name)
+                existing_row = self.get_row(row_name)
             except RowDoesNotExist:
                 self.add_row(*row, key=row_name)
             else:
-                for col_name, value in zip(self.columns, row):
+                for col_name, value, existing_value in zip(
+                    self.columns, row, existing_row
+                ):
+                    if value == existing_value:
+                        continue
                     self.update_cell(row_name, col_name, value, update_width=True)
 
     @on(Click)
