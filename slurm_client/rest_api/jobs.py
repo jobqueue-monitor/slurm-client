@@ -1,5 +1,5 @@
 import datetime as dt
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, TypedDict
 
 from slurm_client.rest_api.errors import format_errors
@@ -88,6 +88,30 @@ class JobDetails:
     array_task_id: int | None
     array_max_tasks: int | None
     array_task: str
+
+    def render(self):
+        exclude = {
+            "selinux_context",
+            "batch_job",
+            "batch_features",
+            "array_job_id",
+            "array_task_id",
+            "array_max_tasks",
+            "array_task",
+            "container",
+            "container_id",
+            "container_type",
+        }
+        names = {
+            "current_working_directory": "working directory",
+            "restart_count": "number of restarts",
+            "system_comment": "comment",
+        }
+        return {
+            names.get(key, key): value
+            for key, value in asdict(self).items()
+            if key not in exclude
+        }
 
 
 @dataclass
