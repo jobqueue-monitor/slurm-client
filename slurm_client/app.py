@@ -140,6 +140,7 @@ class SlurmClient(App):
 
     @on(ExitApp)
     async def on_exit(self) -> None:
+        # TODO: cancel all pending jobs
         # disconnect
         if self.con:
             await self.con.close()
