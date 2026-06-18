@@ -4,6 +4,7 @@ import httpx
 from asyncssh import ConnectionLost as SSHConnectionLost
 from textual import on
 from textual.app import App
+from textual.message import Message
 from textual.messages import ExitApp
 from textual.screen import ModalScreen
 
@@ -24,6 +25,10 @@ from slurm_client.screens.main import MainScreen
 from slurm_client.widgets.footer import SlurmClientFooter
 
 
+class ConnectionEstablished(Message):
+    pass
+
+
 class SlurmClient(App):
     TITLE = "jobqueue-monitor"
 
@@ -33,10 +38,6 @@ class SlurmClient(App):
         super().__init__()
 
         self.config = config
-
-        self.ssh_con = None
-        self.socks_proxy = None
-        self.api_con = None
 
         self.timers = {}
 
@@ -49,6 +50,9 @@ class SlurmClient(App):
         self.api_version = api_version.response_parser(r.json())
 
     async def setup_connections(self) -> None:
+        widget = self.screen.query_one("#content")
+        widget.loading = True
+
         try:
             self.con = await connect(self.config.server)
         except SSHConnectionLost as e:
@@ -57,20 +61,25 @@ class SlurmClient(App):
 
         await self.determine_api_version()
 
+        widget.loading = False
+
+        self.post_message(ConnectionEstablished())
+
+    @on(ConnectionEstablished)
+    def on_connection_established(self, msg: ConnectionEstablished):
+        self.app.timers["ping"] = self.app.set_interval(
+            self.config.ping_interval, self.ping
+        )
+        self.ping()
+
     async def on_load(self) -> None:
         self.con = None
         self.token = None
         self.api_version = None
 
-        self.run_worker(self.setup_connections(), exclusive=True)
-
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         self.push_screen("main")
-
-        self.app.timers["ping"] = self.app.set_interval(
-            self.config.ping_interval, self.ping
-        )
-        self.ping()
+        self.run_worker(self.setup_connections, exclusive=True)
 
     async def ping(self) -> None:
         if isinstance(self.screen, ModalScreen):
