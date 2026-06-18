@@ -1,6 +1,6 @@
 import datetime as dt
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from slurm_client.rest_api.errors import format_errors
 from slurm_client.rest_api.nodes import parse_node_list
@@ -14,13 +14,19 @@ if TYPE_CHECKING:
     from slurm_client.types import JSON
 
 
-class JobSummary(TypedDict):
+@dataclass
+class JobSummary:
+    id: int
     name: str
     user: str
     group: str
     partition: str
     time: dt.datetime
     state: list[str]
+    reason: str
+
+    def render_summary(self):
+        return asdict(self)
 
 
 @dataclass
@@ -315,16 +321,16 @@ class Job:
             case _:
                 time = self.status.start_time
 
-        return {
-            "id": self.info.id,
-            "name": self.info.name,
-            "user": self.submission.user,
-            "group": self.submission.group,
-            "partition": self.info.partition,
-            "time": time,
-            "state": state,
-            "reason": self.status.reason,
-        }
+        return JobSummary(
+            id=self.info.id,
+            name=self.info.name,
+            user=self.submission.user,
+            group=self.submission.group,
+            partition=self.info.partition,
+            time=time,
+            state=state,
+            reason=self.status.reason,
+        )
 
 
 def _extract_submission(data: dict[str, JSON]) -> JobSubmission:
@@ -450,12 +456,39 @@ def _parse_job(time: dt.datetime, data: dict[str, JSON]) -> Job:
     )
 
 
+def _parse_job_summary(data: dict[str, JSON]) -> JobSummary:
+    state = data["job_state"][0]
+    reason = (
+        data["state_reason"] if data.get("state_reason") not in ("None", "") else None
+    )
+    match state:
+        case "RUNNING":
+            time = parse_datetime(data["start_time"])
+        case "PENDING":
+            time = parse_datetime(data["submit_time"])
+        case "COMPLETED" | "TIMEOUT":
+            time = parse_datetime(data["end_time"])
+        case _:
+            time = parse_datetime(data["start_time"])
+
+    return JobSummary(
+        id=data["job_id"],
+        name=data["name"],
+        user=data["user_name"],
+        group=data["group_name"],
+        partition=data["partition"],
+        time=time,
+        state=state,
+        reason=reason,
+    )
+
+
 @request.get("/slurm/{version}/jobs")
-def all_jobs(result: dict[str, JSON]) -> list[Job]:
+def all_jobs(result: dict[str, JSON]) -> list[JobSummary]:
     jobs = result.get("jobs", [])
     time = parse_datetime(result["last_update"])
 
-    rows = [_parse_job(time, job) for job in jobs]
+    rows = [_parse_job_summary(time, job) for job in jobs]
 
     return rows
 
