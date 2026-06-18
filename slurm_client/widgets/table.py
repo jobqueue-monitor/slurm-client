@@ -22,19 +22,24 @@ class SortableTable(DataTable):
         self._sorting = Sorting(columns[0], reverse=False)
 
     def replace_contents(self, new_rows) -> None:
-        for row in new_rows:
-            row_name = str(row[0])
+        processed = {str(r[0]): r for r in new_rows}
+
+        for row_key, row in processed.items():
             try:
-                existing_row = self.get_row(row_name)
+                existing_row = self.get_row(row_key)
             except RowDoesNotExist:
-                self.add_row(*row, key=row_name)
+                self.add_row(*row, key=row_key)
             else:
-                for col_name, value, existing_value in zip(
+                for col_key, value, existing_value in zip(
                     self.columns, row, existing_row
                 ):
                     if value == existing_value:
                         continue
-                    self.update_cell(row_name, col_name, value, update_width=True)
+                    self.update_cell(row_key, col_key, value, update_width=True)
+
+        existing_rows = {k.value for k in self.rows.keys()}
+        for to_delete in existing_rows - processed.keys():
+            self.remove_row(to_delete)
 
     @on(Click)
     async def on_click(self, event: Click) -> None:
