@@ -486,9 +486,7 @@ def _parse_job_summary(data: dict[str, JSON]) -> JobSummary:
 @request.get("/slurm/{version}/jobs")
 def all_jobs(result: dict[str, JSON]) -> list[JobSummary]:
     jobs = result.get("jobs", [])
-    time = parse_datetime(result["last_update"])
-
-    rows = [_parse_job_summary(time, job) for job in jobs]
+    rows = [_parse_job_summary(job) for job in jobs]
 
     return rows
 
