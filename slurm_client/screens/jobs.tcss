@@ -1,0 +1,17 @@
+JobDetails > Horizontal {
+    content-align-horizontal: center;
+    align-horizontal: center;
+    height: 1;
+    margin: 1 4 1 4;
+}
+
+JobDetails ItemGrid#details {
+    grid-size: 2;
+    grid-columns: 1fr 10fr;
+}
+
+Label.key-column {
+    text-align: right;
+    align-horizontal: right;
+    content-align-horizontal: right;
+}
