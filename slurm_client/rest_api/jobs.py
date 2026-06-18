@@ -2,6 +2,7 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypedDict
 
+from slurm_client.rest_api.errors import format_errors
 from slurm_client.rest_api.nodes import parse_node_list
 from slurm_client.rest_api.parsers import parse_datetime, parse_value_set
 from slurm_client.rest_api.request import request
@@ -432,3 +433,13 @@ def all_jobs(result: dict[str, JSON]) -> list[Job]:
     rows = [_parse_job(time, job) for job in jobs]
 
     return rows
+
+
+@request.get("/slurm/{version}/job/{job_id}")
+def job_details(result: dict[str, JSON]) -> Job:
+    jobs = result.get("jobs")
+    if jobs is None:
+        raise format_errors(result["errors"])
+    time = parse_datetime(result["last_update"])
+
+    return _parse_job(time, jobs[0])
