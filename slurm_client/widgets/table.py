@@ -23,7 +23,7 @@ class SortableTable(DataTable):
 
     def replace_contents(self, new_rows) -> None:
         for row in new_rows:
-            row_name = row[0]
+            row_name = str(row[0])
             try:
                 self.get_row(row_name)
             except RowDoesNotExist:
