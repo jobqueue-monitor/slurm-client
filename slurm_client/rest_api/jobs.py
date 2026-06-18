@@ -316,6 +316,7 @@ class Job:
                 time = self.status.start_time
 
         return {
+            "id": self.info.id,
             "name": self.info.name,
             "user": self.submission.user,
             "group": self.submission.group,
