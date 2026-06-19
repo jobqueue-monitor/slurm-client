@@ -5,26 +5,7 @@ JobDetails > Horizontal {
     margin: 1 4 1 4;
 }
 
-JobDetails ItemGrid#details {
-    grid-size: 2;
-    grid-columns: 1fr 10fr;
-}
-
-JobDetails ItemGrid#status {
-    grid-size: 2;
-    grid-columns: 2fr 12fr;
-    border: round green;
-}
-
-JobDetails ItemGrid#status-times {
-    grid-size: 2;
-    grid-columns: 2fr 12fr;
-    border: round green;
-}
-
-JobDetails ItemGrid#logs {
-    grid-size: 2;
-    grid-columns: 2fr 12fr;
+.status-grid {
     border: round green;
 }
 
