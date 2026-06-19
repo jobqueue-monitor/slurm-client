@@ -10,6 +10,24 @@ JobDetails ItemGrid#details {
     grid-columns: 1fr 10fr;
 }
 
+JobDetails ItemGrid#status {
+    grid-size: 2;
+    grid-columns: 2fr 12fr;
+    border: round green;
+}
+
+JobDetails ItemGrid#status-times {
+    grid-size: 2;
+    grid-columns: 2fr 12fr;
+    border: round green;
+}
+
+JobDetails ItemGrid#logs {
+    grid-size: 2;
+    grid-columns: 2fr 12fr;
+    border: round green;
+}
+
 Label.key-column {
     text-align: right;
     align-horizontal: right;

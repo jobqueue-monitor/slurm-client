@@ -7,11 +7,19 @@ from slurm_client.rest_api.nodes import parse_node_list
 from slurm_client.rest_api.parsers import parse_datetime, parse_value_set
 from slurm_client.rest_api.request import request
 from slurm_client.rest_api.resources import ResourceDict, parse_resource_spec
+from slurm_client.utils import identity
 
 if TYPE_CHECKING:
     from typing import Self
 
     from slurm_client.types import JSON
+
+
+def replace_time(time: dt.datetime) -> dt.datetime | None:
+    if time.timestamp() == 0:
+        return None
+
+    return time
 
 
 @dataclass
@@ -282,6 +290,44 @@ class JobStatus:
     stdin_expanded: str
     stdout_expanded: str
     stderr_expanded: str
+
+    def render(self):
+        translations = {
+            "start_time": "started at",
+            "suspend_time": "suspended at",
+            "eligible_time": "eligible at",
+            "resize_time": "resized at",
+            "end_time": "terminated at",
+            "stdin_expanded": "standard input",
+            "stdout_expanded": "standard output",
+            "stderr_expanded": "standard error",
+        }
+        transformations = {
+            "start_time": replace_time,
+            "suspend_time": replace_time,
+            "resize_time": replace_time,
+            "eligible_time": replace_time,
+            "end_time": replace_time,
+        }
+        all = {
+            key: (translations.get(key, key), transformations.get(key, identity)(value))
+            for key, value in asdict(self).items()
+        }
+        status_keys = ["state", "hold", "exit_code", "derived_exit_code", "failed_node"]
+        times_keys = [
+            "start_time",
+            "suspend_time",
+            "resize_time",
+            "eligible_time",
+            "end_time",
+        ]
+        logs_keys = ["stdin_expanded", "stdout_expanded", "stderr_expanded"]
+
+        return {
+            "status": dict(all[k] for k in status_keys),
+            "times": dict(all[k] for k in times_keys),
+            "logs": dict(all[k] for k in logs_keys),
+        }
 
 
 @dataclass

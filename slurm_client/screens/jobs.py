@@ -62,7 +62,9 @@ class JobDetails(Screen):
             with TabPane("Details", classes="tab"):
                 yield ItemGrid(id="details")
             with TabPane("Status", classes="tab"):
-                yield SortableTable(["name"])
+                yield ItemGrid(id="status")
+                yield ItemGrid(id="status-times")
+                yield ItemGrid(id="logs")
             with TabPane("Submission", classes="tab"):
                 yield SortableTable(["name"])
             with TabPane("Scheduling", classes="tab"):
@@ -75,6 +77,15 @@ class JobDetails(Screen):
     def on_mount(self):
         self.run_worker(self.app.ping())
         self.run_worker(self.fetch_job_details())
+
+        status = self.query_one("#status")
+        status.border_title = "State"
+
+        status_times = self.query_one("#status-times")
+        status_times.border_title = "Times"
+
+        logs = self.query_one("#logs")
+        logs.border_title = "Standard streams"
 
     async def fetch_job_details(self) -> None:
         request = job_details.path_parameters(job_id=self.job_id)
@@ -109,6 +120,49 @@ class JobDetails(Screen):
             value_label = Label(rendered, id=value_id)
             details.mount(key_label)
             details.mount(value_label)
+
+        rendered_status = job.status.render()
+        status = self.query_one("#status")
+        for key, value in rendered_status["status"].items():
+            value_id = f"job-status-value-{key.replace(' ', '_')}"
+            rendered = render(key, value)
+            if labels := status.query(f"Label#{value_id}"):
+                value_label = labels[0]
+                value_label.update(rendered)
+                continue
+
+            key_label = Label(f"[b]{key}[/b]", classes="key-column")
+            value_label = Label(rendered, id=value_id)
+            status.mount(key_label)
+            status.mount(value_label)
+
+        times = self.query_one("#status-times")
+        for key, value in rendered_status["times"].items():
+            value_id = f"job-status-times-value-{key.replace(' ', '_')}"
+            rendered = render(key, value)
+            if labels := times.query(f"Label#{value_id}"):
+                value_label = labels[0]
+                value_label.update(rendered)
+                continue
+
+            key_label = Label(f"[b]{key}[/b]", classes="key-column")
+            value_label = Label(rendered, id=value_id)
+            times.mount(key_label)
+            times.mount(value_label)
+
+        logs = self.query_one("#logs")
+        for key, value in rendered_status["logs"].items():
+            value_id = f"job-logs-value-{key.replace(' ', '_')}"
+            rendered = render(key, value)
+            if labels := logs.query(f"Label#{value_id}"):
+                value_label = labels[0]
+                value_label.update(rendered)
+                continue
+
+            key_label = Label(f"[b]{key}[/b]", classes="key-column")
+            value_label = Label(rendered, id=value_id)
+            logs.mount(key_label)
+            logs.mount(value_label)
 
     @on(ScreenSuspend)
     def on_screen_suspend(self) -> None:
