@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 import httpx
@@ -140,7 +141,12 @@ class SlurmClient(App):
 
     @on(ExitApp)
     async def on_exit(self) -> None:
-        # TODO: cancel all pending jobs
+        for timer in self.timers.values():
+            timer.stop()
+
+        for task in asyncio.all_tasks():
+            task.cancel()
+
         # disconnect
         if self.con:
             await self.con.close()
