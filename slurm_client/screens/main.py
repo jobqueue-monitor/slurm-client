@@ -82,10 +82,17 @@ class MainScreen(Screen):
         self.run_worker(self._refresh_current_table())
 
     def action_previous_tab(self) -> None:
+        container = self.query_one("#content")
+        if container.loading:
+            return
         tabs = self.query_one("Tabs")
         tabs.action_previous_tab()
 
     def action_next_tab(self) -> None:
+        container = self.query_one("#content")
+        if container.loading:
+            return
+
         tabs = self.query_one("Tabs")
         tabs.action_next_tab()
 
