@@ -10,7 +10,7 @@ from slurm_client.rest_api.resources import ResourceDict, parse_resource_spec
 from slurm_client.utils import identity
 
 if TYPE_CHECKING:
-    from typing import Self
+    from typing import Any, Self
 
     from slurm_client.types import JSON
 
@@ -65,6 +65,8 @@ class JobSubmission:
     group: str
     group_id: int
 
+    partition: str
+
     submit_line: str
     submit_time: dt.datetime
 
@@ -73,12 +75,22 @@ class JobSubmission:
 
     allocating_node: str
 
+    def render(self) -> dict[str, Any]:
+        return {
+            "user": f"{self.user} ({self.user_id})",
+            "group": f"{self.group} ({self.group_id})",
+            "partition": self.partition,
+            "submission command": self.submit_line,
+            "submitted at": self.submit_time,
+            "allocating node": self.allocating_node,
+            "mail settings": f"{', '.join(self.mail_type) or 'none'}, mails to {self.mail_user}",
+        }
+
 
 @dataclass
 class JobDetails:
     id: int
     name: str
-    partition: str
     command: str
     dependency: str
     nice: int
@@ -385,6 +397,7 @@ def _extract_submission(data: dict[str, JSON]) -> JobSubmission:
         group=data["group_name"],
         user_id=data["user_id"],
         group_id=data["group_id"],
+        partition=data["partition"],
         submit_line=data["submit_line"],
         submit_time=parse_datetime(data["submit_time"]),
         mail_type=data["mail_type"],
@@ -397,7 +410,6 @@ def _extract_info(data: dict[str, JSON]) -> JobDetails:
     return JobDetails(
         id=data["job_id"],
         name=data["name"],
-        partition=data["partition"],
         command=data["command"],
         dependency=data["dependency"],
         nice=data["nice"],

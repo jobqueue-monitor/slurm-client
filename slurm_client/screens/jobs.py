@@ -74,7 +74,7 @@ class JobDetails(Screen):
                 yield KeyValueGrid(id="status-times", classes="status-grid")
                 yield KeyValueGrid(id="logs", classes="status-grid")
             with TabPane("Submission", classes="tab"):
-                yield SortableTable(["name"])
+                yield KeyValueGrid(id="submission")
             with TabPane("Scheduling", classes="tab"):
                 yield SortableTable(["name"])
             with TabPane("Resources", classes="tab"):
@@ -148,6 +148,12 @@ class JobDetails(Screen):
         logs.upsert_many(
             {key: render(key, value) for key, value in rendered_status["logs"].items()},
             id_template="job-logs-value-{key}",
+        )
+
+        submission_tab = self.query_one("#submission")
+        submission_tab.upsert_many(
+            {key: render(key, value) for key, value in job.submission.render().items()},
+            id_template="job-submission-value-{key}",
         )
 
     @on(ScreenSuspend)
