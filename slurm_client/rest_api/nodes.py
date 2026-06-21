@@ -69,6 +69,7 @@ value_converters = {
     "gres_drained": parse_generic_resource_spec,
     "tres": parse_resource_spec,
     "tres_used": parse_resource_spec,
+    "suspend_time": parse_datetime,
 }
 drop = {
     "version",
@@ -181,6 +182,7 @@ class NodeDetails:
 
     boot_time: dt.datetime
     last_busy: dt.datetime | None
+    suspend_time: dt.datetime
 
     operating_system: str
 

@@ -1,22 +1,30 @@
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import TYPE_CHECKING, cast
 
 import httpx
 from textual import on
-from textual.app import ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.events import ScreenResume, ScreenSuspend
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Header, Label, TabbedContent, TabPane
 
 from slurm_client.rest_api.jobs import Job, job_details
+from slurm_client.rest_api.nodes import all_nodes
 from slurm_client.screens.error import NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
 from slurm_client.widgets.kvgrid import KeyValueGrid
 from slurm_client.widgets.table import SortableTable
+
+if TYPE_CHECKING:
+    from typing import Any, ClassVar
+
+    from textual.app import ComposeResult
+
+    from slurm_client.rest_api.nodes import NodeDetails
 
 
 def render(name: str, value: Any) -> str:
@@ -28,6 +36,11 @@ def render(name: str, value: Any) -> str:
             return cast(str, value)
         case int():
             return str(value)
+        case dt.datetime():
+            if value.timestamp() == 0:
+                return "n/a"
+            else:
+                return value.isoformat()
         case _:
             return str(value)
 
@@ -47,6 +60,10 @@ def render_exit_code(exit_code: dict[str, Any], state: list[str]) -> str:
 class JobDetailsFetched(Message):
     details: Job
 
+    excluded_nodes: list[NodeDetails] | None = None
+    required_nodes: list[NodeDetails] | None = None
+    scheduled_nodes: list[NodeDetails] | None = None
+
 
 class JobDetails(Screen):
     BINDINGS = [
@@ -54,6 +71,8 @@ class JobDetails(Screen):
         ("Ctrl+g", "refresh", "Refresh"),
     ]
     CSS_PATH = "jobs.tcss"
+
+    node_columns: ClassVar[list[str]] = ["name", "address", "state"]
 
     def __init__(self, job_id: int, **kwargs):
         super().__init__(**kwargs)
@@ -76,7 +95,17 @@ class JobDetails(Screen):
             with TabPane("Submission", classes="tab"):
                 yield KeyValueGrid(id="submission")
             with TabPane("Scheduling", classes="tab"):
-                yield SortableTable(["name"])
+                yield KeyValueGrid(id="scheduling-info")
+                with Vertical(id="nodes"):
+                    yield SortableTable(
+                        self.node_columns, id="excluded-nodes", classes="nodes"
+                    )
+                    yield SortableTable(
+                        self.node_columns, id="required-nodes", classes="nodes"
+                    )
+                    yield SortableTable(
+                        self.node_columns, id="scheduled-nodes", classes="nodes"
+                    )
             with TabPane("Resources", classes="tab"):
                 yield SortableTable(["name"])
 
@@ -95,6 +124,14 @@ class JobDetails(Screen):
         logs = self.query_one("#logs")
         logs.border_title = "Standard streams"
 
+        nodes = self.query_one("#nodes")
+        nodes.border_title = "Nodes"
+        nodes_tables = self.query(".nodes")
+        for title, table in zip(
+            ["Excluded nodes", "Required nodes", "Scheduled nodes"], nodes_tables
+        ):
+            table.border_title = title
+
     async def fetch_job_details(self) -> None:
         request = job_details.path_parameters(job_id=self.job_id)
 
@@ -106,6 +143,22 @@ class JobDetails(Screen):
 
         parsed = request.response_parser(r.json())
         msg = JobDetailsFetched(parsed)
+
+        r = await self.app.query_api(all_nodes)
+        if r.status_code != httpx.codes.OK:
+            self.post_message(NetworkError(r))
+            return
+
+        nodes = all_nodes.response_parser(r.json())
+        msg.excluded_nodes = [
+            node for node in nodes if node.name in parsed.scheduling.excluded_nodes
+        ]
+        msg.required_nodes = [
+            node for node in nodes if node.name in parsed.scheduling.required_nodes
+        ]
+        msg.scheduled_nodes = [
+            node for node in nodes if node.name in parsed.scheduling.scheduled_nodes
+        ]
 
         self.post_message(msg)
 
@@ -154,6 +207,24 @@ class JobDetails(Screen):
         submission_tab.upsert_many(
             {key: render(key, value) for key, value in job.submission.render().items()},
             id_template="job-submission-value-{key}",
+        )
+
+        scheduling_info = self.query_one("#scheduling-info")
+        scheduling_info.upsert_many(
+            {key: render(key, value) for key, value in job.scheduling.render().items()},
+            id_template="job-scheduling-value-{key}",
+        )
+        excluded_nodes_table = self.query_one("#excluded-nodes")
+        excluded_nodes_table.replace_contents(
+            [list(node.summary().values()) for node in msg.excluded_nodes]
+        )
+        required_nodes_table = self.query_one("#required-nodes")
+        required_nodes_table.replace_contents(
+            [list(node.summary().values()) for node in msg.required_nodes]
+        )
+        scheduled_nodes_table = self.query_one("#scheduled-nodes")
+        scheduled_nodes_table.replace_contents(
+            [list(node.summary().values()) for node in msg.scheduled_nodes]
         )
 
     @on(ScreenSuspend)

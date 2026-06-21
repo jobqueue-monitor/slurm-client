@@ -9,6 +9,18 @@ JobDetails > Horizontal {
     border: round green;
 }
 
+#nodes {
+    border: round green;
+    height: auto;
+    padding: 0 1 0 1;
+    margin: 1 0 1 0;
+}
+
+.nodes {
+    border: round grey;
+    margin: 1 0 1 0;
+}
+
 Label.key-column {
     text-align: right;
     align-horizontal: right;

@@ -242,6 +242,9 @@ class JobResources:
 
     resource_details: JobResourceDetails
 
+    time_limit: int
+    time_minimum: int
+
     max_cpus: int
     max_nodes: int
 
@@ -350,9 +353,15 @@ class JobScheduling:
     excluded_nodes: list[str]
     required_nodes: list[str]
     scheduled_nodes: list[str]  # resources?
-    time_limit: int
-    time_minimum: int
     requeue: bool
+
+    def render(self):
+        return {
+            "cron": self.cron,
+            "contiguous nodes requested": self.contiguous,
+            "schedule before": self.deadline,
+            "requeue requested": self.requeue,
+        }
 
 
 @dataclass
@@ -480,6 +489,8 @@ def _extract_resources(data: dict[str, JSON]) -> JobResources:
         thread_spec=data["thread_spec"],
         cores_per_socket=parse_value_set(data["cores_per_socket"]),
         gres_detail=data["gres_detail"],
+        time_limit=parse_value_set(data["time_limit"]),
+        time_minimum=parse_value_set(data["time_minimum"]),
         tres_per_job=parse_resource_spec(data["tres_per_job"]),
         tres_per_node=parse_resource_spec(data["tres_per_node"]),
         tres_per_task=parse_resource_spec(data["tres_per_task"]),
@@ -492,12 +503,10 @@ def _extract_scheduling(data: dict[str, JSON]) -> JobScheduling:
     return JobScheduling(
         cron=data["cron"],
         contiguous=data["contiguous"],
-        deadline=data["deadline"],
+        deadline=parse_datetime(data["deadline"]),
         excluded_nodes=data["excluded_nodes"],
         required_nodes=data["required_nodes"],
         scheduled_nodes=data["scheduled_nodes"],
-        time_limit=parse_value_set(data["time_limit"]),
-        time_minimum=parse_value_set(data["time_minimum"]),
         requeue=data["requeue"],
     )
 
