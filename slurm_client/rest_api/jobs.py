@@ -473,7 +473,7 @@ def _extract_resources(data: dict[str, JSON]) -> JobResources:
         max_cpus=parse_value_set(data["max_cpus"]),
         max_nodes=parse_value_set(data["max_nodes"]),
         memory_per_tres=data["memory_per_tres"],
-        cpus=parse_value_set(data["cpus"]),
+        min_cpus=parse_value_set(data["cpus"]),
         node_count=parse_value_set(data["node_count"]),
         reboot=data["reboot"],
         memory_per_cpu=parse_value_set(data["memory_per_cpu"]),
