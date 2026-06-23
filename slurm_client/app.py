@@ -123,6 +123,13 @@ class SlurmClient(App):
 
         return await fetch(url, params=request.parameters, headers=headers)
 
+    def stop_all_tasks(self) -> None:
+        for timer in self.timers.values():
+            timer.stop()
+
+        for task in asyncio.all_tasks():
+            task.cancel()
+
     def on_networkerror(self, msg: NetworkError):
         r = msg.response
         error = (
@@ -141,11 +148,7 @@ class SlurmClient(App):
 
     @on(ExitApp)
     async def on_exit(self) -> None:
-        for timer in self.timers.values():
-            timer.stop()
-
-        for task in asyncio.all_tasks():
-            task.cancel()
+        self.stop_all_tasks()
 
         # disconnect
         if self.con:
