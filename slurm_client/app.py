@@ -139,6 +139,8 @@ class SlurmClient(App):
 
     @on(FatalError)
     async def on_fatalerror(self, msg: FatalError):
+        self.stop_all_tasks()
+
         error = msg.render()
 
         def check_quit(quit: bool | None) -> None:
