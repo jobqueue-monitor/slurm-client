@@ -326,6 +326,10 @@ class JobStatus:
             key: (translations.get(key, key), transformations.get(key, identity)(value))
             for key, value in asdict(self).items()
         }
+        all["state"] = (
+            "state",
+            f"{', '.join(self.state)} ({self.reason}): {self.description}",
+        )
         status_keys = ["state", "hold", "exit_code", "derived_exit_code", "failed_node"]
         times_keys = [
             "start_time",
