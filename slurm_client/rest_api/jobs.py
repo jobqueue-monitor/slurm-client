@@ -237,21 +237,19 @@ def _parse_resource_details(data: dict[str, JSON] | None) -> JobResourceDetails 
 
 @dataclass
 class JobResources:
-    allocated_nodes: list[str]
-    network: str
-
-    resource_details: JobResourceDetails
-
-    time_limit: int
     time_minimum: int
-
+    min_cpus: int
     max_cpus: int
     max_nodes: int
 
+    time_limit: int
+
+    node_count: int
+    allocated_nodes: list[str]
+    network: str
+
     memory_per_tres: str
 
-    cpus: int
-    node_count: int
     reboot: bool
 
     memory_per_cpu: int
@@ -268,7 +266,7 @@ class JobResources:
     cores_per_socket: int
 
     gres_detail: list[str]
-
+    resource_details: JobResourceDetails
     tres_per_job: ResourceDict
     tres_per_node: ResourceDict
     tres_per_task: ResourceDict
