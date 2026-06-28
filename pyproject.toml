@@ -4,7 +4,7 @@ requires-python = ">= 3.13"
 license = { text = "Apache-2.0" }
 dependencies = [
   "asyncssh>=2.22.0",
-  "httpx>=0.28.1",
+  "httpx2>=2.5.0",
   "textual>=8.2.4",
   "rich-click>=1.9.7",
 ]
