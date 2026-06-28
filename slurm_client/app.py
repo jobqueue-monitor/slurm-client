@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 
-import httpx
+import httpx2
 from textual import on
 from textual.app import App
 from textual.messages import ExitApp
@@ -39,7 +39,7 @@ class SlurmClient(App):
 
     async def determine_api_version(self):
         r = await self.query_api(api_version)
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             raise NetworkError(r)
 
         self.api_version = api_version.response_parser(r.json())
@@ -85,7 +85,7 @@ class SlurmClient(App):
             return
 
         r = await self.query_api(request=ping)
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             server_info = {}
         else:
             server_info = r.json()
@@ -118,7 +118,7 @@ class SlurmClient(App):
 
         try:
             return await fetch(url, params=request.parameters, headers=headers)
-        except httpx.ReadTimeout as e:
+        except httpx2.ReadTimeout as e:
             reason = f"Failed to fetch {url}: read timeout"
             raise NetworkError(reason) from e
 

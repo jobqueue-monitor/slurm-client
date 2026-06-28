@@ -2,7 +2,7 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import Any, cast
 
-import httpx
+import httpx2
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, ItemGrid
@@ -145,7 +145,7 @@ class NodeDetails(Screen):
             self.post_message(FailedRequest(str(e)))
             return
 
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             self.post_message(FailedRequest(r))
             return
 

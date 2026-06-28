@@ -4,7 +4,7 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
-import httpx
+import httpx2
 from textual import on
 from textual.containers import Horizontal, Vertical
 from textual.events import ScreenResume, ScreenSuspend
@@ -148,7 +148,7 @@ class JobDetails(Screen):
             self.post_message(FailedRequest(str(e)))
             return
 
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             reason = format_error_response(r)
             self.post_message(FailedRequest(reason))
             return
@@ -164,7 +164,7 @@ class JobDetails(Screen):
         except NetworkError as e:
             self.post_message(FailedRequest(str(e)))
             return
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             reason = format_error_response(r)
             self.post_message(FailedRequest(reason))
             return

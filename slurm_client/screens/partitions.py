@@ -1,4 +1,4 @@
-import httpx
+import httpx2
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, ItemGrid, Vertical
@@ -76,11 +76,11 @@ class PartitionDetails(Screen):
             self.post_message(FailedRequest(str(e)))
             return
 
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             reason = format_error_response(r)
             self.post_message(FailedRequest(reason))
             return
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             reason = format_error_response(r)
             self.post_message(FailedRequest(reason))
             return
@@ -89,13 +89,13 @@ class PartitionDetails(Screen):
 
         request = resource_usage.parser_parameters(partition=self.partition_name)
         r = await self.app.query_api(request)
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             self.post_message(NetworkError(r))
             return
         msg.tracked_resources["used"] = request.response_parser(r.json())
 
         r = await self.app.query_api(all_nodes)
-        if r.status_code != httpx.codes.OK:
+        if r.status_code != httpx2.codes.OK:
             self.post_message(NetworkError(r))
             return
 

@@ -2,7 +2,7 @@ import datetime as dt
 from dataclasses import dataclass
 
 import asyncssh
-import httpx
+import httpx2
 from asyncssh import ConnectionLost as SSHConnectionLost
 
 from slurm_client.errors import ConnectionError, TokenError
@@ -35,7 +35,7 @@ class SocksProxy:
 class Connection:
     ssh: asyncssh.SSHClientConnection
     socks_proxy: SocksProxy
-    api: httpx.AsyncClient
+    api: httpx2.AsyncClient
 
     async def close(self):
         await self.api.aclose()
@@ -57,7 +57,7 @@ async def connect(server: str) -> Connection:
 
     ssh = SSHConnection(ssh_con)
     socks_proxy = await create_socks_proxy(ssh)
-    api = httpx.AsyncClient()
+    api = httpx2.AsyncClient()
 
     return Connection(ssh, socks_proxy, api)
 
