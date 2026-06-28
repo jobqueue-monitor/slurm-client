@@ -17,10 +17,11 @@ from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.request import Request
 from slurm_client.screens.error import (
     ErrorScreen,
-    FatalError,
+    FatalErrorMessage,
     FatalErrorScreen,
     NetworkError,
-    SSHError,
+    NetworkErrorMessage,
+    SSHErrorMessage,
 )
 from slurm_client.screens.main import MainScreen
 from slurm_client.widgets.footer import SlurmClientFooter
@@ -56,13 +57,13 @@ class SlurmClient(App):
         try:
             self.con = await connect(self.config.server)
         except SSHConnectionLost as e:
-            self.post_message(SSHError(e))
+            self.post_message(SSHErrorMessage(e))
             return
 
         try:
             await self.determine_api_version()
         except NetworkError as e:
-            self.post_message(e)
+            self.post_message(NetworkErrorMessage.from_exc(e))
             return
 
         widget.loading = False
@@ -112,7 +113,7 @@ class SlurmClient(App):
                     self.con.ssh, lifespan=self.config.token_lifespan
                 )
             except RuntimeError as e:
-                self.post_message(SSHError(e))
+                self.post_message(SSHErrorMessage(e))
                 return
 
         url = f"{self.config.address}/{path.lstrip('/')}"
@@ -131,15 +132,16 @@ class SlurmClient(App):
         for timer in self.timers.values():
             timer.stop()
 
-    def on_networkerror(self, msg: NetworkError):
+    @on(NetworkErrorMessage)
+    def on_networkerror(self, msg: NetworkErrorMessage):
         r = msg.response
         error = (
             f"Network error while fetching {r.url}: {r.status_code} ({r.reason_phrase})"
         )
         self.push_screen(ErrorScreen(error))
 
-    @on(FatalError)
-    async def on_fatalerror(self, msg: FatalError):
+    @on(FatalErrorMessage)
+    async def on_fatalerror(self, msg: FatalErrorMessage):
         error = msg.render()
 
         self.stop_all_timers()

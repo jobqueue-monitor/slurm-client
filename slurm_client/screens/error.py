@@ -9,7 +9,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Label
 
 
-class Error(Exception, Message):
+class Error(Exception):
     pass
 
 
@@ -18,8 +18,21 @@ class NetworkError(Error):
     response: httpx.Response
 
 
+class ErrorMessage(Message):
+    pass
+
+
 @dataclass
-class FatalError(Error):
+class NetworkErrorMessage(Error):
+    response: httpx.Response
+
+    @classmethod
+    def from_exc(cls, e):
+        return cls(e.response)
+
+
+@dataclass
+class FatalErrorMessage(ErrorMessage):
     context: ClassVar[str]
     reason: str
 
@@ -28,13 +41,13 @@ class FatalError(Error):
 
 
 @dataclass
-class SSHError(FatalError):
+class SSHErrorMessage(FatalErrorMessage):
     context: ClassVar[str] = "Connecting to the ssh server failed:"
     reason: str
 
 
 @dataclass
-class TokenError(FatalError):
+class TokenErrorMessage(FatalErrorMessage):
     context: ClassVar[str] = "Failed to create a token:"
     reason: str
 
