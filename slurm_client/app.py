@@ -45,8 +45,7 @@ class SlurmClient(App):
     async def determine_api_version(self):
         r = await self.query_api(api_version)
         if r.status_code != httpx.codes.OK:
-            self.screen.post_message(NetworkError(r))
-            return
+            raise NetworkError(r)
 
         self.api_version = api_version.response_parser(r.json())
 
@@ -60,7 +59,11 @@ class SlurmClient(App):
             self.post_message(SSHError(e))
             return
 
-        await self.determine_api_version()
+        try:
+            await self.determine_api_version()
+        except NetworkError as e:
+            self.post_message(e)
+            return
 
         widget.loading = False
 
@@ -110,6 +113,7 @@ class SlurmClient(App):
                 )
             except RuntimeError as e:
                 self.post_message(SSHError(e))
+                return
 
         url = f"{self.config.address}/{path.lstrip('/')}"
 

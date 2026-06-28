@@ -10,7 +10,7 @@ from textual.widgets import Button, Label
 
 
 @dataclass
-class NetworkError(Message):
+class NetworkError(IOError, Message):
     response: httpx.Response
 
 
