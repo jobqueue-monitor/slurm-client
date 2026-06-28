@@ -9,13 +9,17 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Label
 
 
+class Error(Exception, Message):
+    pass
+
+
 @dataclass
-class NetworkError(IOError, Message):
+class NetworkError(Error):
     response: httpx.Response
 
 
 @dataclass
-class FatalError(Message):
+class FatalError(Error):
     context: ClassVar[str]
     reason: str
 
