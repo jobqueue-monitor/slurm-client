@@ -72,7 +72,7 @@ class JobDetails(Screen):
     ]
     CSS_PATH = "jobs.tcss"
 
-    node_columns: ClassVar[list[str]] = ["name", "address", "state"]
+    node_columns: ClassVar[list[str]] = ["name", "address", "state", "partitions"]
 
     def __init__(self, job_id: int, **kwargs):
         super().__init__(**kwargs)
@@ -216,15 +216,24 @@ class JobDetails(Screen):
         )
         excluded_nodes_table = self.query_one("#excluded-nodes")
         excluded_nodes_table.replace_contents(
-            [list(node.summary().values()) for node in msg.excluded_nodes]
+            [
+                [v for k, v in node.render_summary().items() if k in self.node_columns]
+                for node in msg.excluded_nodes
+            ]
         )
         required_nodes_table = self.query_one("#required-nodes")
         required_nodes_table.replace_contents(
-            [list(node.summary().values()) for node in msg.required_nodes]
+            [
+                [v for k, v in node.render_summary().items() if k in self.node_columns]
+                for node in msg.required_nodes
+            ]
         )
         scheduled_nodes_table = self.query_one("#scheduled-nodes")
         scheduled_nodes_table.replace_contents(
-            [list(node.summary().values()) for node in msg.scheduled_nodes]
+            [
+                [v for k, v in node.render_summary().items() if k in self.node_columns]
+                for node in msg.scheduled_nodes
+            ]
         )
 
     @on(ScreenSuspend)
