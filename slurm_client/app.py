@@ -5,10 +5,10 @@ import httpx
 from asyncssh import ConnectionLost as SSHConnectionLost
 from textual import on
 from textual.app import App
-from textual.message import Message
 from textual.messages import ExitApp
 from textual.screen import ModalScreen
 
+from slurm_client.messages import ConnectionEstablished
 from slurm_client.rest_api import (
     api_version,
     ping,
@@ -25,10 +25,6 @@ from slurm_client.screens.error import (
 )
 from slurm_client.screens.main import MainScreen
 from slurm_client.widgets.footer import SlurmClientFooter
-
-
-class ConnectionEstablished(Message):
-    pass
 
 
 class SlurmClient(App):
