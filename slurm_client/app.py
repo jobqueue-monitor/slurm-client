@@ -2,27 +2,25 @@ import asyncio
 from typing import Any
 
 import httpx
-from asyncssh import ConnectionLost as SSHConnectionLost
 from textual import on
 from textual.app import App
 from textual.messages import ExitApp
 from textual.screen import ModalScreen
 
-from slurm_client.messages import ConnectionEstablished
+from slurm_client.errors import ConnectionError, NetworkError
+from slurm_client.messages import (
+    ConnectionEstablished,
+    FailedRequest,
+    FailedSSHConnection,
+    FatalError,
+)
 from slurm_client.rest_api import (
     api_version,
     ping,
 )
 from slurm_client.rest_api.connection import connect, refresh_token
 from slurm_client.rest_api.request import Request
-from slurm_client.screens.error import (
-    ErrorScreen,
-    FatalErrorMessage,
-    FatalErrorScreen,
-    NetworkError,
-    NetworkErrorMessage,
-    SSHErrorMessage,
-)
+from slurm_client.screens.error import ErrorScreen, FatalErrorScreen
 from slurm_client.screens.main import MainScreen
 from slurm_client.widgets.footer import SlurmClientFooter
 
@@ -52,14 +50,14 @@ class SlurmClient(App):
 
         try:
             self.con = await connect(self.config.server)
-        except SSHConnectionLost as e:
-            self.post_message(SSHErrorMessage(e))
+        except ConnectionError as e:
+            self.post_message(FailedSSHConnection(str(e)))
             return
 
         try:
             await self.determine_api_version()
         except NetworkError as e:
-            self.post_message(NetworkErrorMessage.from_exc(e))
+            self.post_message(FailedRequest(str(e)))
             return
 
         widget.loading = False
@@ -104,13 +102,9 @@ class SlurmClient(App):
         )
 
         if self.token is None or not self.token.is_valid():
-            try:
-                self.token = await refresh_token(
-                    self.con.ssh, lifespan=self.config.token_lifespan
-                )
-            except RuntimeError as e:
-                self.post_message(SSHErrorMessage(e))
-                return
+            self.token = await refresh_token(
+                self.con.ssh, lifespan=self.config.token_lifespan
+            )
 
         url = f"{self.config.address}/{path.lstrip('/')}"
 
@@ -122,22 +116,22 @@ class SlurmClient(App):
         if self.token is not None:
             headers["X-SLURM-USER-TOKEN"] = str(self.token)
 
-        return await fetch(url, params=request.parameters, headers=headers)
+        try:
+            return await fetch(url, params=request.parameters, headers=headers)
+        except httpx.ReadTimeout as e:
+            reason = f"Failed to fetch {url}: read timeout"
+            raise NetworkError(reason) from e
 
     def stop_all_timers(self) -> None:
         for timer in self.timers.values():
             timer.stop()
 
-    @on(NetworkErrorMessage)
-    def on_networkerror(self, msg: NetworkErrorMessage):
-        r = msg.response
-        error = (
-            f"Network error while fetching {r.url}: {r.status_code} ({r.reason_phrase})"
-        )
-        self.push_screen(ErrorScreen(error))
+    @on(FailedRequest)
+    def on_failed_request(self, msg: FailedRequest):
+        self.push_screen(ErrorScreen(msg.reason))
 
-    @on(FatalErrorMessage)
-    async def on_fatalerror(self, msg: FatalErrorMessage):
+    @on(FatalError)
+    async def on_fatal_error(self, msg: FatalError):
         error = msg.render()
 
         self.stop_all_timers()

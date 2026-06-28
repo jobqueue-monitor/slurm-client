@@ -5,13 +5,16 @@ from textual.containers import Horizontal, ItemGrid, Vertical
 from textual.screen import Screen
 from textual.widgets import Header, Label, ListItem, ListView, Static
 
+from slurm_client.errors import NetworkError, TokenError
+from slurm_client.messages import FailedRequest, FailedTokenCreation
+from slurm_client.rest_api.errors import format_error_response
 from slurm_client.rest_api.nodes import all_nodes
 from slurm_client.rest_api.partitions import (
     PartitionDetails,
     partition_details,
     resource_usage,
 )
-from slurm_client.screens.error import ErrorScreen, NetworkError
+from slurm_client.screens.error import ErrorScreen
 from slurm_client.screens.nodes import NodeDetails
 from slurm_client.widgets.footer import SlurmClientFooter
 from slurm_client.widgets.resource import render_resources
@@ -64,9 +67,22 @@ class PartitionDetails(Screen):
 
     async def fetch_partition_details(self):
         request = partition_details.path_parameters(partition_name=self.partition_name)
-        r = await self.app.query_api(request)
+        try:
+            r = await self.app.query_api(request)
+        except TokenError as e:
+            self.post_message(FailedTokenCreation(str(e)))
+            return
+        except NetworkError as e:
+            self.post_message(FailedRequest(str(e)))
+            return
+
         if r.status_code != httpx.codes.OK:
-            self.post_message(NetworkError(r))
+            reason = format_error_response(r)
+            self.post_message(FailedRequest(reason))
+            return
+        if r.status_code != httpx.codes.OK:
+            reason = format_error_response(r)
+            self.post_message(FailedRequest(reason))
             return
 
         msg = request.response_parser(r.json())

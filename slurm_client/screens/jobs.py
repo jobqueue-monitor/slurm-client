@@ -12,9 +12,11 @@ from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Header, Label, TabbedContent, TabPane
 
+from slurm_client.errors import NetworkError, TokenError
+from slurm_client.messages import FailedRequest, FailedTokenCreation
+from slurm_client.rest_api.errors import format_error_response
 from slurm_client.rest_api.jobs import Job, job_details
 from slurm_client.rest_api.nodes import all_nodes
-from slurm_client.screens.error import NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
 from slurm_client.widgets.kvgrid import KeyValueGrid
 from slurm_client.widgets.table import SortableTable
@@ -131,22 +133,40 @@ class JobDetails(Screen):
             ["Excluded nodes", "Required nodes", "Scheduled nodes"], nodes_tables
         ):
             table.border_title = title
+            table.cursor_type = "row"
+            table.zebra_stripes = True
 
     async def fetch_job_details(self) -> None:
         request = job_details.path_parameters(job_id=self.job_id)
 
-        r = await self.app.query_api(request)
+        try:
+            r = await self.app.query_api(request)
+        except TokenError as e:
+            self.post_message(FailedTokenCreation(str(e)))
+            return
+        except NetworkError as e:
+            self.post_message(FailedRequest(str(e)))
+            return
+
         if r.status_code != httpx.codes.OK:
-            raise ValueError(f"response: {r.status_code}")
-            self.post_message(NetworkError(r))
+            reason = format_error_response(r)
+            self.post_message(FailedRequest(reason))
             return
 
         parsed = request.response_parser(r.json())
         msg = JobDetailsFetched(parsed)
 
-        r = await self.app.query_api(all_nodes)
+        try:
+            r = await self.app.query_api(all_nodes)
+        except TokenError as e:
+            self.post_message(FailedTokenCreation(str(e)))
+            return
+        except NetworkError as e:
+            self.post_message(FailedRequest(str(e)))
+            return
         if r.status_code != httpx.codes.OK:
-            self.post_message(NetworkError(r))
+            reason = format_error_response(r)
+            self.post_message(FailedRequest(reason))
             return
 
         nodes = all_nodes.response_parser(r.json())

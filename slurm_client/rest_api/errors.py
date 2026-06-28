@@ -3,8 +3,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import httpx
+
 if TYPE_CHECKING:
     from slurm_client.types import JSON
+
+
+def format_error_response(r: httpx.Response) -> str:
+    return "\n".join(
+        [
+            f"Failed to fetch {r.url}:",
+            "",
+            "Code: {r.status_code}",
+            "",
+            r.reason_phrase,
+        ]
+    )
 
 
 @dataclass

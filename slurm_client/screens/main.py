@@ -8,6 +8,8 @@ from textual.events import ScreenResume, ScreenSuspend
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Header, TabbedContent, TabPane
 
+from slurm_client.errors import NetworkError, TokenError
+from slurm_client.messages import FailedRequest, FailedTokenCreation
 from slurm_client.rest_api.jobs import all_jobs
 from slurm_client.rest_api.nodes import all_nodes
 from slurm_client.rest_api.partitions import all_partitions
@@ -114,8 +116,14 @@ class MainScreen(Screen):
             "nodes": all_nodes,
         }
         request = requests[kind]
-        r = await self.app.query_api(request)
-        msg = TableContentFetched(kind, request.response_parser(r.json()))
+        try:
+            r = await self.app.query_api(request)
+        except TokenError as e:
+            msg = FailedTokenCreation(str(e))
+        except NetworkError as e:
+            msg = FailedRequest(str(e))
+        else:
+            msg = TableContentFetched(kind, request.response_parser(r.json()))
 
         self.post_message(msg)
 

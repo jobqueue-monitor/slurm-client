@@ -12,9 +12,10 @@ from textual.screen import Screen
 from textual.widgets import Header, Label
 from textual_plotext import PlotextPlot
 
+from slurm_client.errors import NetworkError, TokenError
+from slurm_client.messages import FailedRequest, FailedTokenCreation
 from slurm_client.rest_api.nodes import NodeDetails, node_details
 from slurm_client.rest_api.resources import as_unit
-from slurm_client.screens.error import NetworkError
 from slurm_client.widgets.footer import SlurmClientFooter
 from slurm_client.widgets.resource import render_resource
 
@@ -135,9 +136,17 @@ class NodeDetails(Screen):
 
     async def fetch_node_details(self):
         request = node_details.path_parameters(node_name=self.node_name)
-        r = await self.app.query_api(request)
+        try:
+            r = await self.app.query_api(request)
+        except TokenError as e:
+            self.post_message(FailedTokenCreation(str(e)))
+            return
+        except NetworkError as e:
+            self.post_message(FailedRequest(str(e)))
+            return
+
         if r.status_code != httpx.codes.OK:
-            self.post_message(NetworkError(r))
+            self.post_message(FailedRequest(r))
             return
 
         parsed = request.response_parser(r.json())

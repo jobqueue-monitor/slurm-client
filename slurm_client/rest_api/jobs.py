@@ -65,6 +65,9 @@ class JobSubmission:
     group: str
     group_id: int
 
+    account: str
+    qos: str
+
     partition: str
 
     submit_line: str
@@ -79,6 +82,8 @@ class JobSubmission:
         return {
             "user": f"{self.user} ({self.user_id})",
             "group": f"{self.group} ({self.group_id})",
+            "account": self.account,
+            "qos": self.qos,
             "partition": self.partition,
             "submission command": self.submit_line,
             "submitted at": self.submit_time,
@@ -408,6 +413,8 @@ def _extract_submission(data: dict[str, JSON]) -> JobSubmission:
         group=data["group_name"],
         user_id=data["user_id"],
         group_id=data["group_id"],
+        account=data["account"],
+        qos=data["qos"],
         partition=data["partition"],
         submit_line=data["submit_line"],
         submit_time=parse_datetime(data["submit_time"]),

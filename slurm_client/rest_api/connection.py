@@ -3,7 +3,9 @@ from dataclasses import dataclass
 
 import asyncssh
 import httpx
+from asyncssh import ConnectionLost as SSHConnectionLost
 
+from slurm_client.errors import ConnectionError, TokenError
 from slurm_client.rest_api.token import Token
 
 
@@ -48,7 +50,12 @@ async def create_socks_proxy(con: SSHConnection) -> SocksProxy:
 
 
 async def connect(server: str) -> Connection:
-    ssh = SSHConnection(await asyncssh.connect(server))
+    try:
+        ssh_con = await asyncssh.connect(server)
+    except SSHConnectionLost as e:
+        raise ConnectionError(e)
+
+    ssh = SSHConnection(ssh_con)
     socks_proxy = await create_socks_proxy(ssh)
     api = httpx.AsyncClient()
 
@@ -64,6 +71,6 @@ async def refresh_token(con: SSHConnection, lifespan: dt.timedelta) -> Token:
 
     if result.returncode != 0:
         error = result.stderr
-        raise RuntimeError(f"failed to fetch a token: {error}")
+        raise TokenError(f"failed to fetch a token: {error}")
 
     return Token.from_expr(result.stdout.strip(), now + lifespan)
